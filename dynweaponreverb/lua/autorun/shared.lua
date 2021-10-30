@@ -1,0 +1,158 @@
+print("Reverb initialized...")
+ 
+--basic tails
+local tailnear = "distaudio/guntail_oldfar.wav"
+local tailflat = "distaudio/explosion_far.wav"
+local tailveryfar = "distaudio/clapper2_veryfar.wav"
+local tailveryveryfar = "distaudio/clapper2_veryveryfar.wav"
+AddCSLuaFile()
+ 
+local soniccrack = "distaudio/hho_explosion_outdoors2.wav"
+ 
+--underwater sounds
+local underwater_shot = "distaudio/underwater_shot10.wav"
+ 
+--urban tails
+
+local urbantails = {"distaudio/clienttail_urban5.wav", "distaudio/clienttail_urban6.wav"}
+local urbantails2 = {"distaudio/clienttail_urban5.wav", "distaudio/clienttail_urban6.wav"}
+ 
+--indoors tails
+
+local roomtails = {"distaudio/hho_explosion_indoors9.wav"}
+local largeroomtails = {"distaudio/clienttail_roomlarge3.wav"}
+ 
+local reverbenv = {"urban", "forest", "indoors"}
+ 
+
+local roomheight = 1000
+local spaceindex = 0
+local PlayerName = nil
+ 
+local hash = {}
+local res = {}
+swepstoignoreND = {}
+ 
+local volumeconvar = nil --Set and updated when a weapon is fired; otherwise will cause an error
+local volume = 1.0
+ 
+function has_value(tbl, item)
+    for key, value in pairs(tbl) do
+        if value == item then return true end
+    end
+    return false
+end
+ 
+function correct_src(weapon, source)
+    local owner = weapon:GetOwner()
+ 
+    if owner:IsNPC() then return owner:GetShootPos() end
+ 
+    local dir    = owner:EyeAngles()
+    local offset = weapon:GetBuff_Override("Override_BarrelOffsetHip") or weapon.BarrelOffsetHip
+ 
+    if weapon:GetOwner():Crouching() then
+        offset = weapon:GetBuff_Override("Override_BarrelOffsetCrouch") or weapon.BarrelOffsetCrouch or offset
+    end
+ 
+    if weapon:GetState() == ArcCW.STATE_SIGHTS then
+        offset = weapon:GetBuff_Override("Override_BarrelOffsetSighted") or weapon.BarrelOffsetSighted or offset
+    end
+ 
+    source = source - dir:Right()   * offset[1]
+    source = source - dir:Forward() * offset[2]
+    source = source - dir:Up()      * offset[3]
+ 
+    return source
+end
+ 
+hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
+    local weapon = NULL
+    if entity:IsPlayer() then
+        weapon = entity:GetActiveWeapon()
+    else
+        weapon = entity
+    end
+ 
+    if SERVER then
+        volume = GetConVar("za_volume"):GetFloat() --Updating volume value
+        if GetConVar("za_enable_reverb"):GetBool() == true then
+            if has_value(swepstoignoreND, tostring(weapon:GetClass())) == false then
+                --Penetration fix by jp4
+                weapon_owner = weapon:GetOwner()
+                if weapon_owner != nil and weapon_owner:IsPlayer() and data.Attacker == weapon_owner then
+                    entity_pos = weapon:GetOwner():GetPos()
+ 
+                    if string.find(weapon:GetClass(), "arccw") then
+                        shoot_pos = correct_src(weapon, data.Src)
+                    else
+                        shoot_pos = data.Src
+                    end
+ 
+                    if Vector(entity_pos.x, entity_pos.y, 0) != Vector(shoot_pos.x, shoot_pos.y, 0) or data.Distance < 100 then
+                        return
+                    end
+                end
+ 
+                local tracedown = util.TraceLine( {  --Tracing a line to floor
+                    start = entity:EyePos() +  Vector(0, 0, 1) * 1,
+                    endpos = entity:EyePos(s) + Vector(0, 0, 1) * -10000,
+                    mask = MASK_OPAQUE
+                } )
+ 
+                local traceup = util.TraceLine( {  --Tracing a line from floor to ceiling to measure room height
+                    start = tracedown.HitPos, --Trace start offset to prevent trace hitting player
+                    endpos = tracedown.HitPos + Vector(0, 0, 1) * 10000,
+                    mask = MASK_OPAQUE
+                } )
+ 
+                if entity:WaterLevel() == 3 then --3 means completely submerged
+                    entity:EmitSound(underwater_shot, 70, 100, 1, CHAN_WEAPON )
+                end
+ 
+                roomheight = traceup.HitPos:Distance(tracedown.HitPos), traceup.Entity                  
+                if roomheight < 400 && traceup.HitSky == false then --Small room sound
+                    if GetConVar("za_indoors_tail"):GetBool() == true then
+                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110, 100, 1 * volume, CHAN_STATIC )
+                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110, 100, 1 * volume, CHAN_STATIC ) -- for meatier sound u can just play it twice
+                        
+                    end
+                elseif roomheight < 1000 && roomheight > 200 && traceup.HitSky == false then
+                    if GetConVar("za_indoors_tail"):GetBool() == true then
+                        entity:EmitSound(largeroomtails[ math.random( #largeroomtails ) ], 95, 100, 1 * volume, CHAN_STATIC ) --Large room sound
+                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110, 100, 1 * volume, CHAN_STATIC )
+                    end
+                else
+                    if GetConVar("za_outdoors_tail"):GetBool() == true then
+                        if entity:WaterLevel() != 3 then
+                            if GetConVar("za_oneinstance"):GetBool() == true then
+                                for i, name in ipairs(urbantails) do
+                                    entity:StopSound(name) -- Making sure that only one instance of the sound is playing
+                                end
+                                for i, name in ipairs(urbantails2) do
+                                    entity:StopSound(name) 
+                                end
+                            end
+ 
+                            entity:EmitSound(urbantails[ math.random( #urbantails ) ], 90, 90, 0.4 * volume, CHAN_STATIC )
+                        end
+                    end
+                end
+            end
+        end
+    end
+ 
+    for i, v in ipairs( player.GetAll() ) do
+        if SERVER then
+            if GetConVar("za_server_distance_shots"):GetBool() == true then
+ 
+                if (v:GetViewEntity():GetPos():Distance(entity:GetPos()) > 800) then
+                    net.Start( "playSoundToClient" )
+                    net.Send(v)
+                    v:SetNWInt( 'listenerdistance', v:GetViewEntity():GetPos():Distance(entity:GetPos()))
+                end
+            end
+        end
+    end
+end)
+ 
