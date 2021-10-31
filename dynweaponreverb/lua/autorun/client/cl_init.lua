@@ -7,7 +7,7 @@ local tailsuperfar = "distaudio/clapper2_superfar.wav"
 local mediumtails = {"distaudio/clapper2_flat.wav", "distaudio/clapper2_medium.wav" }
 local volume = 1.0
 local volumeconvar = NULL
-
+local localp = LocalPlayer()
 CreateConVar( "za_volume", 1.0, FCVAR_REPLICATED)
 
 --SETTINGS
@@ -28,7 +28,7 @@ local function UnmuteCurrentWeapon()
     
     net.Start( "removeIgnoreSWEP" )
     if LocalPlayer():GetActiveWeapon():GetClass() != NULL then
-        net.WriteString(tostring(LocalPlayer():GetActiveWeapon():GetClass()))
+        net.WriteString(tostring(localp:GetActiveWeapon():GetClass()))
         net.SendToServer()
     end
 end
@@ -39,7 +39,7 @@ local function MuteCurrentWeapon()
     
     net.Start( "addIgnoreSWEP" )
     if LocalPlayer():GetActiveWeapon():GetClass() != NULL == true then
-        net.WriteString(tostring(LocalPlayer():GetActiveWeapon():GetClass()))
+        net.WriteString(tostring(localp:GetActiveWeapon():GetClass()))
         net.SendToServer()
     end
 end
@@ -58,7 +58,7 @@ hook.Add( "PopulateToolMenu", "DynreverbSettings", function()
         local volumeslider = panel:NumSlider( "Volume (wont affect distance gunfire)", "za_volume", 0.0, 1.0)
         
         volumeslider.OnValueChanged = function( panel, value )
-            net.Start("setServerDynreverbVolumeSliderValue") --Sending the volumeslider value to server so the server can set the volume convar
+            net.Start("setServerDynreverbVolumeSliderValue") --sending the volumeslider value to server so the server can set the volume convar
             net.WriteFloat(value)
             net.SendToServer()
         end
@@ -68,7 +68,7 @@ hook.Add( "PopulateToolMenu", "DynreverbSettings", function()
         local ignorebutton = panel:Button( "Mute dynamic reverb for current weapon (experimental)" )
             
         ignorebutton.DoClick = function()
-            if(LocalPlayer():IsAdmin() == true) then
+            if(localp:IsAdmin() == true) then
                 MuteCurrentWeapon()
             end
         end
@@ -76,7 +76,7 @@ hook.Add( "PopulateToolMenu", "DynreverbSettings", function()
         local unignorebutton = panel:Button( "Unmute dynamic reverb for current weapon (experimental)" )
 
         unignorebutton.DoClick = function()
-            if(LocalPlayer():IsAdmin() == true) then
+            if(localp:IsAdmin() == true) then
                 UnmuteCurrentWeapon()    
             end
        
@@ -92,28 +92,28 @@ end)
 
 net.Receive( "playSoundToClient", function()
     
-    local localear = LocalPlayer():GetViewEntity()
-
-    if(LocalPlayer():GetNWInt( 'listenerdistance', 0 ) < 200) then
+    local localear = LocalPlayer():GetViewEntity() --more like eyes but you cant hear with eyes can you
+    local listenerdistance = localp:GetNWInt( 'listenerdistance', 0 )
+    if (listenerdistance < 200) then
         localear:EmitSound(tailnear, 70, 100, 1, CHAN_STATIC )
         localear:EmitSound(tailflat, 70, 180, 0.2, CHAN_STATIC )
     end
     
-    if(LocalPlayer():GetNWInt( 'listenerdistance', 0 ) < 3000 && LocalPlayer():GetNWInt( 'listenerdistance', 0 )  > 200) then
+    if (listenerdistance < 3000 && listenerdistance  > 200) then
         localear:EmitSound(mediumtails[ math.random( #mediumtails )], 70, 95, 0.1, CHAN_STATIC )
         localear:EmitSound(tailflat, 70, 130, 0.2, CHAN_STATIC )
     end
 
-    if(LocalPlayer():GetNWInt( 'listenerdistance', 0 ) < 8000 && LocalPlayer():GetNWInt( 'listenerdistance', 0 )  > 3000) then
+    if(listenerdistance < 8000 && listenerdistance  > 3000) then
         localear:EmitSound(tailveryfar, 70, 100, 1, CHAN_STATIC )
         localear:EmitSound(tailflat, 70, 110, 0.2, CHAN_STATIC )
     end
 
-    if(LocalPlayer():GetNWInt( 'listenerdistance', 0 ) > 8000 && LocalPlayer():GetNWInt( 'listenerdistance', 0 )  < 10000) then
+    if (listenerdistance > 8000 && listenerdistance  < 10000) then
         localear:EmitSound(tailveryveryfar, 70, 100, 0.3, CHAN_STATIC )
     end
 
-    if(LocalPlayer():GetNWInt( 'listenerdistance', 0 ) > 10000) then
+    if (listenerdistance > 10000 && listenerdistance < 30000) then
         localear:EmitSound(tailveryveryfar, 70, 80, 0.2, CHAN_STATIC )
     end
 end )
