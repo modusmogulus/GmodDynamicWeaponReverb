@@ -7,13 +7,11 @@ local tailsuperfar = "distaudio/clapper2_superfar.wav"
 local mediumtails = {"distaudio/clapper2_flat.wav", "distaudio/clapper2_medium.wav" }
 local volume = 1.0
 local volumeconvar = NULL
-local localp = LocalPlayer()
 CreateConVar( "za_volume", 1.0, FCVAR_REPLICATED)
 
 --SETTINGS
 
 hook.Add( "AddToolMenuCategories", "ReverbCategory", function()
-    
     if ConVarExists( "za_volume" ) then
         print("convar za_volume exists")
         volumeconvar = GetConVar("za_volume")
@@ -24,21 +22,18 @@ hook.Add( "AddToolMenuCategories", "ReverbCategory", function()
 end )
 
 local function UnmuteCurrentWeapon()
-    
-    
+    local localp = LocalPlayer()
     net.Start( "removeIgnoreSWEP" )
-    if LocalPlayer():GetActiveWeapon():GetClass() != NULL then
+    if localp:GetActiveWeapon():GetClass() != NULL then
         net.WriteString(tostring(localp:GetActiveWeapon():GetClass()))
         net.SendToServer()
     end
 end
 
-
 local function MuteCurrentWeapon()
-    
-    
+    local localp = LocalPlayer()
     net.Start( "addIgnoreSWEP" )
-    if LocalPlayer():GetActiveWeapon():GetClass() != NULL == true then
+    if localp:GetActiveWeapon():GetClass() != NULL == true then
         net.WriteString(tostring(localp:GetActiveWeapon():GetClass()))
         net.SendToServer()
     end
@@ -68,7 +63,7 @@ hook.Add( "PopulateToolMenu", "DynreverbSettings", function()
         local ignorebutton = panel:Button( "Mute dynamic reverb for current weapon (experimental)" )
             
         ignorebutton.DoClick = function()
-            if(localp:IsAdmin() == true) then
+            if(LocalPlayer():IsAdmin() == true) then
                 MuteCurrentWeapon()
             end
         end
@@ -76,7 +71,7 @@ hook.Add( "PopulateToolMenu", "DynreverbSettings", function()
         local unignorebutton = panel:Button( "Unmute dynamic reverb for current weapon (experimental)" )
 
         unignorebutton.DoClick = function()
-            if(localp:IsAdmin() == true) then
+            if(LocalPlayer():IsAdmin() == true) then
                 UnmuteCurrentWeapon()    
             end
        
@@ -91,9 +86,9 @@ end)
 
 
 net.Receive( "playSoundToClient", function()
-    
-    local localear = LocalPlayer():GetViewEntity() --more like eyes but you cant hear with eyes can you
-    local listenerdistance = LocalPlayer():GetNWInt( 'listenerdistance', 0 )
+    local localp = LocalPlayer()
+    local localear = localp:GetViewEntity() --more like eyes but you cant hear with eyes can you
+    local listenerdistance = localp:GetNWInt( 'listenerdistance', 0 )
     if (listenerdistance < 200) then
         localear:EmitSound(tailnear, 70, 100, 1, CHAN_STATIC )
         localear:EmitSound(tailflat, 70, 180, 0.2, CHAN_STATIC )

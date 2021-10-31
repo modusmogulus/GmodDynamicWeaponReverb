@@ -66,7 +66,7 @@ function correct_src(weapon, source)
     return source
 end
 
-hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
+function DynamicReverb(entity, data)
     local weapon = NULL
     local reverb_range = 1
     if entity:IsPlayer() then
@@ -74,7 +74,7 @@ hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
     else
         weapon = entity
     end
- 
+
     if SERVER then
         volume = GetConVar("za_volume"):GetFloat() --Updating volume value
         if GetConVar("za_enable_reverb"):GetBool() == true then
@@ -174,5 +174,10 @@ hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
             end
         end
     end
+end
+
+timer.Simple(1, function()
+    hook.Add("EntityFireBullets", "Teams_DynamicReverb", DynamicReverb)
 end)
+
  
