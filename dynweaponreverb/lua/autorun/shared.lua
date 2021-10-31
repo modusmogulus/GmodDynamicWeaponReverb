@@ -45,24 +45,24 @@ end
  
 function correct_src(weapon, source)
     local owner = weapon:GetOwner()
- 
+
     if owner:IsNPC() then return owner:GetShootPos() end
- 
+
     local dir    = owner:EyeAngles()
     local offset = weapon:GetBuff_Override("Override_BarrelOffsetHip") or weapon.BarrelOffsetHip
- 
+
     if weapon:GetOwner():Crouching() then
         offset = weapon:GetBuff_Override("Override_BarrelOffsetCrouch") or weapon.BarrelOffsetCrouch or offset
     end
- 
+
     if weapon:GetState() == ArcCW.STATE_SIGHTS then
-        offset = weapon:GetBuff_Override("Override_BarrelOffsetSighted") or weapon.BarrelOffsetSighted or offset
+        offset = weapon:GetBuff_Override("Override_BarrelOffsetSighted") or offset or weapon.BarrelOffsetSighted
     end
- 
+
     source = source - dir:Right()   * offset[1]
     source = source - dir:Forward() * offset[2]
     source = source - dir:Up()      * offset[3]
- 
+
     return source
 end
  
@@ -81,14 +81,16 @@ hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
                 --Penetration fix by jp4
                 weapon_owner = weapon:GetOwner()
                 if weapon_owner != nil and weapon_owner:IsPlayer() and data.Attacker == weapon_owner then
+                    
                     entity_pos = weapon:GetOwner():GetPos()
- 
+
                     if string.find(weapon:GetClass(), "arccw") then
+                        if data.Distance == 20000 then return end
                         shoot_pos = correct_src(weapon, data.Src)
                     else
                         shoot_pos = data.Src
                     end
- 
+
                     if Vector(entity_pos.x, entity_pos.y, 0) != Vector(shoot_pos.x, shoot_pos.y, 0) or data.Distance < 100 then
                         return
                     end
