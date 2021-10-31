@@ -42,21 +42,24 @@ function has_value(tbl, item)
     end
     return false
 end
- 
+
 function correct_src(weapon, source)
+    -- I swear to fucking god if someone changes this in ArcCW again...
     local owner = weapon:GetOwner()
 
     if owner:IsNPC() then return owner:GetShootPos() end
 
     local dir    = owner:EyeAngles()
-    local offset = weapon:GetBuff_Override("Override_BarrelOffsetHip") or weapon.BarrelOffsetHip
+    local offset = Vector(0, 0, 0)
 
-    if owner:Crouching() then
+    if weapon:GetOwner():Crouching() then
         offset = weapon:GetBuff_Override("Override_BarrelOffsetCrouch") or weapon.BarrelOffsetCrouch or offset
     end
 
     if weapon:GetState() == ArcCW.STATE_SIGHTS then
-        offset = weapon:GetBuff_Override("Override_BarrelOffsetSighted") or offset or weapon.BarrelOffsetSighted
+        offset = LerpVector(weapon:GetSightDelta(), offset, weapon:GetBuff_Override("Override_BarrelOffsetSighted", weapon.BarrelOffsetSighted) or offset)
+    else
+        offset = LerpVector(1 - weapon:GetSightDelta(), offset, weapon:GetBuff_Override("Override_BarrelOffsetHip", weapon.BarrelOffsetHip) or offset)
     end
 
     source = source - dir:Right()   * offset[1]
@@ -67,7 +70,6 @@ function correct_src(weapon, source)
 end
 
 function DynamicReverb(entity, data)
-    if data.Distance < 100 then return end
     local weapon = NULL
     local reverb_range = 1
     if entity:IsPlayer() then
@@ -84,7 +86,7 @@ function DynamicReverb(entity, data)
                 weapon_owner = weapon:GetOwner()
                 weapon_class = weapon:GetClass()
                 if weapon_owner != nil and weapon_owner:IsPlayer() and data.Attacker == weapon_owner then
-
+                    --if data.Distance < 100 then return end
                     entity_pos = weapon:GetOwner():GetPos()
 
                     if string.find(weapon_class, "arccw") then
@@ -179,7 +181,7 @@ function DynamicReverb(entity, data)
 end
 
 timer.Simple(1, function()
-    hook.Add("EntityFireBullets", "Teams_DynamicReverb", DynamicReverb)
+    hook.Add("EntityFireBullets", "Teams_DynamicReverbs", DynamicReverb)
 end)
 
  
