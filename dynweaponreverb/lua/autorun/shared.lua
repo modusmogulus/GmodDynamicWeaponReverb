@@ -81,11 +81,13 @@ hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
             if has_value(swepstoignoreND, tostring(weapon:GetClass())) == false then
                 --Penetration fix by jp4
                 weapon_owner = weapon:GetOwner()
+                weapon_class = weapon:GetClass()
                 if weapon_owner != nil and weapon_owner:IsPlayer() and data.Attacker == weapon_owner then
                     entity_pos = weapon:GetOwner():GetPos()
 
-                    if string.find(weapon:GetClass(), "arccw") then
+                    if string.find(weapon_class, "arccw") then
                         if data.Distance == 20000 then return end
+                        print(data.Distance)
                         shoot_pos = correct_src(weapon, data.Src)
                     else
                         shoot_pos = data.Src
@@ -96,18 +98,18 @@ hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
                     end
                 end
 
-                if string.find(weapon:GetClass(), "arccw") and data.Distance != 20000 and weapon:GetBuff_Override("Silencer") then
-                    volume = volume * 0.4
+                if string.find(weapon_class, "arccw") and data.Distance != 20000 and weapon:GetBuff_Override("Silencer") then
+                    volume = volume * 0.6
                     reverb_range = 0.4
-                elseif string.find(weapon:GetClass(), "tfa") and weapon:GetSilenced() then
-                    volume = volume * 0.4
+                elseif string.find(weapon_class, "tfa") and weapon:GetSilenced() then
+                    volume = volume * 0.6
                     reverb_range = 0.4
-                elseif string.find(weapon:GetClass(), "mg_") then
+                elseif string.find(weapon_class, "mg_") or weapon_class == mg_valpha then
                     for name, attachments in pairs(weapon.Customization) do
                         if name != "Muzzle" then continue end
                         local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
                         if string.find(attachment.Key, "silence") then
-                            volume = volume * 0.4
+                            volume = volume * 0.6
                             reverb_range = 0.4
                         end
                     end
