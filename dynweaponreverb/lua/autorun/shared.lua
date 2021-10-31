@@ -87,7 +87,6 @@ hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
 
                     if string.find(weapon_class, "arccw") then
                         if data.Distance == 20000 then return end
-                        print(data.Distance)
                         shoot_pos = correct_src(weapon, data.Src)
                     else
                         shoot_pos = data.Src
