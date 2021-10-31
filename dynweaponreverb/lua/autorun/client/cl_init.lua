@@ -93,7 +93,7 @@ end)
 net.Receive( "playSoundToClient", function()
     
     local localear = LocalPlayer():GetViewEntity() --more like eyes but you cant hear with eyes can you
-    local listenerdistance = localp:GetNWInt( 'listenerdistance', 0 )
+    local listenerdistance = LocalPlayer():GetNWInt( 'listenerdistance', 0 )
     if (listenerdistance < 200) then
         localear:EmitSound(tailnear, 70, 100, 1, CHAN_STATIC )
         localear:EmitSound(tailflat, 70, 180, 0.2, CHAN_STATIC )
