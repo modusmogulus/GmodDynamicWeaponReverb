@@ -88,7 +88,6 @@ function DynamicReverb(entity, data)
                 weapon_class = weapon:GetClass()
                 if weapon_owner != nil and weapon_owner:IsPlayer() and data.Attacker == weapon_owner then
                     entity_pos = weapon:GetOwner():GetPos()
-
                     if string.find(weapon_class, "arccw") then
                         if data.Distance == 20000 then return end
                         shoot_pos = correct_src(weapon, data.Src)
@@ -116,8 +115,17 @@ function DynamicReverb(entity, data)
                             reverb_range = 0.4
                         end
                     end
+                elseif string.find(weapon_class, "cw_") then
+                    for k, v in pairs(weapon.ActiveAttachments) do
+                        if v == false then continue end
+                        local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
+                        if att.isSuppressor then
+                            volume = volume * 0.6
+                            reverb_range = 0.4
+                        end
+                    end
                 end
- 
+
                 local tracedown = util.TraceLine( {  --Tracing a line to floor
                     start = entity:EyePos() +  Vector(0, 0, 1) * 1,
                     endpos = entity:EyePos(s) + Vector(0, 0, 1) * -10000,
@@ -139,7 +147,6 @@ function DynamicReverb(entity, data)
                     if GetConVar("za_indoors_tail"):GetBool() == true then
                         entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110 * reverb_range, 100, 1 * volume, CHAN_STATIC )
                         entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110 * reverb_range, 100, 1 * volume, CHAN_STATIC ) -- for meatier sound u can just play it twice
-                        
                     end
                 elseif roomheight < 1000 && roomheight > 200 && traceup.HitSky == false then
                     if GetConVar("za_indoors_tail"):GetBool() == true then
