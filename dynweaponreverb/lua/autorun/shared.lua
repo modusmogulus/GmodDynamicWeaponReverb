@@ -67,6 +67,7 @@ function correct_src(weapon, source)
 end
 
 function DynamicReverb(entity, data)
+    if data.Distance < 100 then return end
     local weapon = NULL
     local reverb_range = 1
     if entity:IsPlayer() then
@@ -83,6 +84,7 @@ function DynamicReverb(entity, data)
                 weapon_owner = weapon:GetOwner()
                 weapon_class = weapon:GetClass()
                 if weapon_owner != nil and weapon_owner:IsPlayer() and data.Attacker == weapon_owner then
+
                     entity_pos = weapon:GetOwner():GetPos()
 
                     if string.find(weapon_class, "arccw") then
