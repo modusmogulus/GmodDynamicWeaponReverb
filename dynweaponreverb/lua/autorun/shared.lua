@@ -51,7 +51,7 @@ function correct_src(weapon, source)
     local dir    = owner:EyeAngles()
     local offset = weapon:GetBuff_Override("Override_BarrelOffsetHip") or weapon.BarrelOffsetHip
 
-    if weapon:GetOwner():Crouching() then
+    if owner:Crouching() then
         offset = weapon:GetBuff_Override("Override_BarrelOffsetCrouch") or weapon.BarrelOffsetCrouch or offset
     end
 
@@ -65,9 +65,10 @@ function correct_src(weapon, source)
 
     return source
 end
- 
+
 hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
     local weapon = NULL
+    local reverb_range = 1
     if entity:IsPlayer() then
         weapon = entity:GetActiveWeapon()
     else
@@ -81,7 +82,6 @@ hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
                 --Penetration fix by jp4
                 weapon_owner = weapon:GetOwner()
                 if weapon_owner != nil and weapon_owner:IsPlayer() and data.Attacker == weapon_owner then
-                    
                     entity_pos = weapon:GetOwner():GetPos()
 
                     if string.find(weapon:GetClass(), "arccw") then
@@ -93,6 +93,23 @@ hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
 
                     if Vector(entity_pos.x, entity_pos.y, 0) != Vector(shoot_pos.x, shoot_pos.y, 0) or data.Distance < 100 then
                         return
+                    end
+                end
+
+                if string.find(weapon:GetClass(), "arccw") and data.Distance != 20000 and weapon:GetBuff_Override("Silencer") then
+                    volume = volume * 0.4
+                    reverb_range = 0.4
+                elseif string.find(weapon:GetClass(), "tfa") and weapon:GetSilenced() then
+                    volume = volume * 0.4
+                    reverb_range = 0.4
+                elseif string.find(weapon:GetClass(), "mg_") then
+                    for name, attachments in pairs(weapon.Customization) do
+                        if name != "Muzzle" then continue end
+                        local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
+                        if string.find(attachment.Key, "silence") then
+                            volume = volume * 0.4
+                            reverb_range = 0.4
+                        end
                     end
                 end
  
@@ -115,14 +132,14 @@ hook.Add("EntityFireBullets", "ZAudio:Bullet", function(entity, data)
                 roomheight = traceup.HitPos:Distance(tracedown.HitPos), traceup.Entity                  
                 if roomheight < 400 && traceup.HitSky == false then --Small room sound
                     if GetConVar("za_indoors_tail"):GetBool() == true then
-                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110, 100, 1 * volume, CHAN_STATIC )
-                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110, 100, 1 * volume, CHAN_STATIC ) -- for meatier sound u can just play it twice
+                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110 * reverb_range, 100, 1 * volume, CHAN_STATIC )
+                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110 * reverb_range, 100, 1 * volume, CHAN_STATIC ) -- for meatier sound u can just play it twice
                         
                     end
                 elseif roomheight < 1000 && roomheight > 200 && traceup.HitSky == false then
                     if GetConVar("za_indoors_tail"):GetBool() == true then
-                        entity:EmitSound(largeroomtails[ math.random( #largeroomtails ) ], 95, 100, 1 * volume, CHAN_STATIC ) --Large room sound
-                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110, 100, 1 * volume, CHAN_STATIC )
+                        entity:EmitSound(largeroomtails[ math.random( #largeroomtails ) ], 95 * reverb_range, 100, 1 * volume, CHAN_STATIC ) --Large room sound
+                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 95 * reverb_range, 100, 1 * volume, CHAN_STATIC )
                     end
                 else
                     if GetConVar("za_outdoors_tail"):GetBool() == true then
