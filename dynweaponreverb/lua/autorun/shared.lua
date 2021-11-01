@@ -115,7 +115,7 @@ function DynamicReverb(entity, data)
                             reverb_range = 0.4
                         end
                     end
-                elseif string.find(weapon_class, "cw_") then
+                elseif string.find(weapon_class, "cw_") and not string.find(weapon_class, "arccw") then
                     for k, v in pairs(weapon.ActiveAttachments) do
                         if v == false then continue end
                         local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
@@ -165,7 +165,8 @@ function DynamicReverb(entity, data)
                                 end
                             end
  
-                            entity:EmitSound(urbantails[ math.random( #urbantails ) ], 90, 90, 0.4 * volume, CHAN_STATIC )
+                            entity:EmitSound(urbantails[ math.random( #urbantails ) ], 90 * reverb_range, 90, 0.4 * volume, CHAN_STATIC )
+                            --entity:EmitSound(roomtails[ math.random( #roomtails ) ], 95 * reverb_range, 100, 1 * volume, CHAN_STATIC )
                         end
                     end
                 end
