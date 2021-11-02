@@ -14,11 +14,15 @@ resource.AddFile("distaudio/clienttail_roomlarge3.wav")
 resource.AddFile("distaudio/underwater_shot10.wav")
 
 
+resource.AddFile("distaudio/exp_lpg_4_44khz.wav")
+resource.AddFile("distaudio/exp_lpg_6_44khz.wav")
+resource.AddFile("distaudio/exp_lpg_8_44khz.wav")
+resource.AddFile("distaudio/exp_lpg_10_44khz.wav")
+resource.AddFile("distaudio/exp_lpg_11_44khz.wav")
 
-
-	--convars
+--convars
 CreateConVar( "za_enable_reverb", "1", true, false)
-CreateConVar( "za_volume", 1.0, FCVAR_REPLICATED )
+CreateConVar( "za_volume", 0.8, FCVAR_REPLICATED )
 
 CreateConVar( "za_server_distance_shots", "1", true, false)
 CreateConVar( "za_outdoors_tail", "1", true, false)

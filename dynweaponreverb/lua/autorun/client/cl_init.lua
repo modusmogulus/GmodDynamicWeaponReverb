@@ -1,7 +1,7 @@
 --basic tails
 local tailnear = "distaudio/guntail_oldfar.wav"
 local tailveryfar = "distaudio/clapper2_veryfar.wav"
-local tailflat = "distaudio/explosion_far.wav"
+local tailflat = "distaudio/clapper2_flat.wav"
 local tailveryveryfar = "distaudio/clapper2_veryveryfar.wav"
 local tailsuperfar = "distaudio/clapper2_superfar.wav"
 local mediumtails = {"distaudio/clapper2_flat.wav", "distaudio/clapper2_medium.wav" }
@@ -82,7 +82,7 @@ end)
 
 
 
---   DISTANCE SOUND STUFF --
+--   DISTANCE GUNSHOT STUFF --
 
 
 net.Receive( "playSoundToClient", function()

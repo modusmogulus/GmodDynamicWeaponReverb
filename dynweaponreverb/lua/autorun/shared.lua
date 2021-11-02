@@ -22,11 +22,9 @@ local urbantails2 = {"distaudio/clienttail_urban5.wav", "distaudio/clienttail_ur
 local roomtails = {"distaudio/hho_explosion_indoors9.wav"}
 local largeroomtails = {"distaudio/clienttail_roomlarge3.wav"}
  
-local reverbenv = {"urban", "forest", "indoors"}
- 
+
 
 local roomheight = 1000
-local spaceindex = 0
 local PlayerName = nil
  
 local hash = {}
@@ -34,7 +32,7 @@ local res = {}
 swepstoignoreND = {}
  
 local volumeconvar = nil --Set and updated when a weapon is fired; otherwise will cause an error
-local volume = 1.0
+local volume = 0.8
  
 function has_value(tbl, item)
     for key, value in pairs(tbl) do
@@ -42,6 +40,8 @@ function has_value(tbl, item)
     end
     return false
 end
+
+
 
 function correct_src(weapon, source)
     -- I swear to fucking god if someone changes this in ArcCW again...
