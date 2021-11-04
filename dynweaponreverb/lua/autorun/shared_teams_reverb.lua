@@ -65,6 +65,10 @@ function correct_src(weapon, source)
     return source
 end
 
+function string.startswith(String,Start)
+   return string.sub(String,1,string.len(Start))==Start
+end
+
 function DynamicReverb(entity, data)
     if data.Distance < 100 then return end
     local weapon = NULL
@@ -96,13 +100,13 @@ function DynamicReverb(entity, data)
                     end
                 end
 
-                if string.find(weapon_class, "arccw") and data.Distance != 20000 and weapon:GetBuff_Override("Silencer") then
+                if string.startswith(weapon_class, "arccw_") and data.Distance != 20000 and weapon:GetBuff_Override("Silencer") then
                     volume = volume * 0.6
                     reverb_range = 0.4
-                elseif string.find(weapon_class, "tfa") and weapon:GetSilenced() then
+                elseif string.startswith(weapon_class, "tfa_") and weapon:GetSilenced() then
                     volume = volume * 0.6
                     reverb_range = 0.4
-                elseif string.find(weapon_class, "mg_") or weapon_class == mg_valpha then
+                elseif string.startswith(weapon_class, "mg_") or weapon_class == mg_valpha then
                     for name, attachments in pairs(weapon.Customization) do
                         if name != "Muzzle" then continue end
                         local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
@@ -111,7 +115,7 @@ function DynamicReverb(entity, data)
                             reverb_range = 0.4
                         end
                     end
-                elseif string.find(weapon_class, "cw_") and not string.find(weapon_class, "arccw") then
+                elseif string.startswith(weapon_class, "cw_") then
                     for k, v in pairs(weapon.ActiveAttachments) do
                         if v == false then continue end
                         local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
