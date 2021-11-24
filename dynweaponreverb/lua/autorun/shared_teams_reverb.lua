@@ -145,11 +145,21 @@ function DynamicReverb(entity, data)
                 roomheight = traceup.HitPos:Distance(tracedown.HitPos), traceup.Entity                  
                 if roomheight < 400 && traceup.HitSky == false then --Small room sound
                     if GetConVar("za_indoors_tail"):GetBool() == true then
+                        if GetConVar("za_oneinstance"):GetBool() == true then
+                            for i, name in ipairs(roomtails) do
+                                entity:StopSound(name)
+                            end
+                        end
                         entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110 * reverb_range, 100, 1 * volume, CHAN_STATIC )
                         entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110 * reverb_range, 100, 1 * volume, CHAN_STATIC ) -- for meatier sound u can just play it twice
                     end
                 elseif roomheight < 1000 && roomheight > 200 && traceup.HitSky == false then
                     if GetConVar("za_indoors_tail"):GetBool() == true then
+                        if GetConVar("za_oneinstance"):GetBool() == true then
+                            for i, name in ipairs(largeroomtails) do
+                                entity:StopSound(name)
+                            end
+                        end
                         entity:EmitSound(largeroomtails[ math.random( #largeroomtails ) ], 95 * reverb_range, 100, 1 * volume, CHAN_STATIC ) --Large room sound
                         entity:EmitSound(roomtails[ math.random( #roomtails ) ], 95 * reverb_range, 100, 1 * volume, CHAN_STATIC )
                     end
