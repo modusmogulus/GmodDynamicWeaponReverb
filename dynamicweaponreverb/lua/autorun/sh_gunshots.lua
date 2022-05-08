@@ -86,6 +86,32 @@ function math.average(t)
     return sum / #t
 end
 
+function correct_src(weapon, source)
+    -- I swear to fucking god if someone changes this in ArcCW again...
+    local owner = weapon:GetOwner()
+
+    if owner:IsNPC() then return owner:GetShootPos() end
+
+    local dir    = owner:EyeAngles()
+    local offset = Vector(0, 0, 0)
+
+    if weapon:GetOwner():Crouching() then
+        offset = weapon:GetBuff_Override("Override_BarrelOffsetCrouch") or weapon.BarrelOffsetCrouch or offset
+    end
+
+    if weapon:GetState() == ArcCW.STATE_SIGHTS then
+        offset = LerpVector(weapon:GetSightDelta(), offset, weapon:GetBuff_Override("Override_BarrelOffsetSighted", weapon.BarrelOffsetSighted) or offset)
+    else
+        offset = LerpVector(1 - weapon:GetSightDelta(), offset, weapon:GetBuff_Override("Override_BarrelOffsetHip", weapon.BarrelOffsetHip) or offset)
+    end
+
+    source = source - dir:Right()   * offset[1]
+    source = source - dir:Forward() * offset[2]
+    source = source - dir:Up()      * offset[3]
+
+    return source
+end
+
 
 function DynamicReverb(entity, data)
 
@@ -199,6 +225,43 @@ function DynamicReverb(entity, data)
         if ammotype == data.AmmoType or has_value(supported_ammunitions, ammotype) == false then
             if desiredspace == currentspace or desiredspace == "" then
                 if excludespace == "" or currentspace != excludespace then
+                    local weapon_owner = weapon:GetOwner()
+                    local weapon_class = weapon:GetClass()
+                    if weapon_owner != nil and weapon_owner:IsPlayer() and data.Attacker == weapon_owner then
+                        entity_pos = weapon:GetOwner():GetPos()
+                        if string.find(weapon_class, "arccw") then
+                            if data.Distance == 20000 then return end
+                            shoot_pos = correct_src(weapon, data.Src)
+                        else
+                            shoot_pos = data.Src
+                        end
+
+                        if Vector(entity_pos.x, entity_pos.y, 0) != Vector(shoot_pos.x, shoot_pos.y, 0) or data.Distance < 100 then
+                            return
+                        end
+                    end
+
+                    if string.startswith(weapon_class, "arccw_") and data.Distance != 20000 and weapon:GetBuff_Override("Silencer") then
+                        volumemultiplier = volumemultiplier * 0.6
+                    elseif string.startswith(weapon_class, "tfa_") and weapon:GetSilenced() then
+                        volumemultiplier = volumemultiplier * 0.6
+                    elseif string.startswith(weapon_class, "mg_") or weapon_class == mg_valpha then
+                        for name, attachments in pairs(weapon.Customization) do
+                            if name != "Muzzle" then continue end
+                            local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
+                            if string.find(attachment.Key, "silence") then
+                                volumemultiplier = volumemultiplier * 0.6
+                            end
+                        end
+                    elseif string.startswith(weapon_class, "cw_") then
+                        for k, v in pairs(weapon.ActiveAttachments) do
+                            if v == false then continue end
+                            local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
+                            if att.isSuppressor then
+                                volumemultiplier = volumemultiplier * 0.6
+                            end
+                        end
+                    end
 
                     net.Start("dynrev_playSoundAtClient")
                     

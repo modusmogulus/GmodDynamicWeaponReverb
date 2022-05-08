@@ -34,6 +34,7 @@ net.Receive( "dynrev_playSoundAtClient", function( len, ply )
         --2.0 * volumemultiplier, CHAN_STATIC)
 
         EmitSound( Sound( firesound ), shooter:GetPos(), 1, CHAN_STATIC, 1, 130, 0, randompitch )
+        EmitSound( Sound( firesound ), shooter:GetPos(), 1, CHAN_STATIC, 1, 130, 0, randompitch )
         --EmitSound( Sound( firesound ), shooter:GetPos(), 1, CHAN_STATIC, 1, 130, 0, randompitch )
 
     end)
