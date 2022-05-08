@@ -242,15 +242,15 @@ function DynamicReverb(entity, data)
                     end
 
                     if string.startswith(weapon_class, "arccw_") and data.Distance != 20000 and weapon:GetBuff_Override("Silencer") then
-                        volumemultiplier = volumemultiplier * 0.5
+                        volumemultiplier = volumemultiplier * 0.6
                     elseif string.startswith(weapon_class, "tfa_") and weapon:GetSilenced() then
-                        volumemultiplier = volumemultiplier * 0.5
+                        volumemultiplier = volumemultiplier * 0.6
                     elseif string.startswith(weapon_class, "mg_") or weapon_class == mg_valpha then
                         for name, attachments in pairs(weapon.Customization) do
                             if name != "Muzzle" then continue end
                             local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
                             if string.find(attachment.Key, "silence") then
-                                volumemultiplier = volumemultiplier * 0.5
+                                volumemultiplier = volumemultiplier * 0.6
                             end
                         end
                     elseif string.startswith(weapon_class, "cw_") then
@@ -258,13 +258,13 @@ function DynamicReverb(entity, data)
                             if v == false then continue end
                             local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
                             if att.isSuppressor then
-                                volumemultiplier = volumemultiplier * 0.5
+                                volumemultiplier = volumemultiplier * 0.6
                             end
                         end
                     end
 
                     if desiredspace == "field" or desiredspace == "city" then
-                        volumemultiplier = volumemultiplier * 0.5
+                        volumemultiplier = volumemultiplier * 0.6
                     end 
 
                     net.Start("dynrev_playSoundAtClient")
@@ -290,25 +290,25 @@ function DynamicReverb(entity, data)
 
         ReverbTheGunshot(hptailscity,     "SMG1",   "city",        "room", 1.0, false)
         ReverbTheGunshot(hptails,         "SMG1",   "field",       "room", 1.0, false)
-        ReverbTheGunshot(hptailsroom,     "SMG1",   "room",        "city", indoorpercentage * 1.2, false)
+        ReverbTheGunshot(hptailsroom,     "SMG1",   "room",        "city", math.min(indoorpercentage * 1.2, 1), false)
 
         ReverbTheGunshot(hptailscity,     "AR2",    "city",        "room", 1.0, false)
         ReverbTheGunshot(hptails,         "AR2",    "field",       "room", 1.0, false)
-        ReverbTheGunshot(aptailsroom,     "AR2",    "room",        "city", indoorpercentage * 1.2, false)
+        ReverbTheGunshot(aptailsroom,     "AR2",    "room",        "city", math.min(indoorpercentage * 1.2, 1), false)
 
         ReverbTheGunshot(lptailscity,    "Pistol",  "city",        "room", 1.0, false)
         ReverbTheGunshot(lptails,        "Pistol",  "field",       "room", 1.0, false)
-        ReverbTheGunshot(lptailsroom,    "Pistol",  "room",        "city", indoorpercentage * 1.2, false)
+        ReverbTheGunshot(lptailsroom,    "Pistol",  "room",        "city", math.min(indoorpercentage * 1.2, 1), false)
 
         if has_value(supported_ammunitions, data.AmmoType) == false then
             ReverbTheGunshot(hptailscity,    "",  "city",        "room", 1.0, false)
             ReverbTheGunshot(hptails,        "",  "field",       "room", 1.0, false)
-            ReverbTheGunshot(lptailsroom,    "",  "room",        "city", indoorpercentage * 1.2, false)
+            ReverbTheGunshot(lptailsroom,    "",  "room",        "city", math.min(indoorpercentage * 1.2, 1), false)
         end
 
         ReverbTheGunshot(lptailscity,    "357",     "city",       "room", 1.0, false)
         ReverbTheGunshot(lptails,        "357",     "field",      "room", 1.0, true)
-        ReverbTheGunshot(lptailsroom,    "357",     "room",       "city", indoorpercentage * 1.2, false)
+        ReverbTheGunshot(lptailsroom,    "357",     "room",       "city", math.min(indoorpercentage * 1.2, 1), false)
 
 
         --print(data.AmmoType)
