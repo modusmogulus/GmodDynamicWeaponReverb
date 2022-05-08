@@ -269,6 +269,7 @@ function DynamicReverb(entity, data)
                         net.WriteTable(soundtable)
                         net.WriteEntity(entity)
                         net.WriteBool(sidechain)
+                        net.WriteString(desiredspace)
 
                     net.Broadcast()
                 end

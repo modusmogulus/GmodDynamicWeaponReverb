@@ -6,6 +6,7 @@ net.Receive( "dynrev_playSoundAtClient", function( len, ply )
     soundtable = net.ReadTable()
     shooter = net.ReadEntity()
     sidechain = net.ReadBool() -- nothing fancy, not a real sidechaining effect. just forces the one instance thing
+    desiredspace = net.ReadString()
     
 
     timespeed = 331 * 1.905 / 1 -- sound speed in air converted from m/s to gmod units
@@ -34,8 +35,8 @@ net.Receive( "dynrev_playSoundAtClient", function( len, ply )
         --2.0 * volumemultiplier, CHAN_STATIC)
 
         EmitSound( Sound( firesound ), shooter:GetPos(), 1, CHAN_STATIC, 1, 130, 0, randompitch )
-        EmitSound( Sound( firesound ), shooter:GetPos(), 1, CHAN_STATIC, 1, 130, 0, randompitch )
-        --EmitSound( Sound( firesound ), shooter:GetPos(), 1, CHAN_STATIC, 1, 130, 0, randompitch )
+        // this sounds better, trust. - relaxtakenotes
+        if desiredspace == "room" then EmitSound( Sound( firesound ), shooter:GetPos(), 1, CHAN_STATIC, 1, 130, 0, randompitch ) end
 
     end)
 
