@@ -86,6 +86,29 @@ function math.average(t)
     return sum / #t
 end
 
+local function createUpwardsTrace(ply, offset)
+    local pos = ply:GetShootPos()
+    local tr = util.TraceLine({start=pos + offset, endpos=pos + Vector(offset.x, offset.y, 100000000), filter=ply})
+    local temp = util.TraceLine({start=tr.StartPos, endpos=ply:GetPos() + ply:OBBCenter()})
+    tr.traceableToPlayer = (temp.Entity == ply)
+    return tr
+end
+
+local function getOutdoorsState(ply)
+    local tr_1 = createUpwardsTrace(ply, Vector(0,0,0))
+    local tr_2 = createUpwardsTrace(ply, Vector(120,0,0))
+    local tr_3 = createUpwardsTrace(ply, Vector(0,120,0))
+    local tr_4 = createUpwardsTrace(ply, Vector(-120,0,0))
+    local tr_5 = createUpwardsTrace(ply, Vector(0,-120,0))
+
+    massive_hitsky = ((tr_1.HitSky and tr_1.traceableToPlayer) or
+                 (tr_2.HitSky and tr_2.traceableToPlayer) or
+                 (tr_3.HitSky and tr_3.traceableToPlayer) or
+                 (tr_4.HitSky and tr_4.traceableToPlayer) or
+                 (tr_5.HitSky and tr_5.traceableToPlayer))
+    return massive_hitsky -- true means we're outdoors, false means we're indoors
+end
+
 function correct_src(weapon, source)
     -- I swear to fucking god if someone changes this in ArcCW again...
     local owner = weapon:GetOwner()
@@ -114,87 +137,55 @@ end
 
 
 function DynamicReverb(entity, data)
-
     if data.Distance < 100 then return end
-
+    print("____________________")
     local weapon = NULL
     local reverb_range = 1
-    if entity:IsPlayer() then
-        weapon = entity:GetActiveWeapon()
-    else
+
+    if not entity:IsPlayer() and not entity:IsNPC() then
         weapon = entity
+        entity = weapon:GetOwner()
+    end
+
+    if entity:IsPlayer() or entity:IsNPC() then 
+        weapon = entity:GetActiveWeapon()
     end
 
     function DetermineSpace()
-        
-        local singletrace = Vector(1, 8, 1)
+        local singletrace = Vector(1, 8, 1) * 100000000
         local recordedtraces = {}
         local recordedtraces_indoors = {}
         local tracehymmi
         local roomheight
+        local degrees = 360/reflections
 
         for i=1,reflections,1 do 
-            singletrace:Rotate( Angle(math.sin(i) * reflections, math.cos(i) * reflections, math.tan(i) * reflections ) ) -- i suck at math so idk if this is correct but it works!
-            --singletrace:Rotate( Angle(math.random(0, 360), math.random(0, 360), math.random(0, 360) ) )
-
+            singletrace:Rotate(Angle(0,degrees))
             tracehymmi = util.TraceLine({ -- Tracing a line to floor
-                start = entity:EyePos(),
-                endpos = entity:EyePos() + singletrace * -10000,
-                mask = MASK_OPAQUE
+                start = entity:GetShootPos(),
+                endpos = entity:GetShootPos() + singletrace,
+                filter = entity
             })
-
             recordedtraces[i] = entity:EyePos():Distance(tracehymmi.HitPos)
-
-            
-            if entity:EyePos():Distance(tracehymmi.HitPos) < 600 then recordedtraces_indoors[i] = 1
+            if entity:GetShootPos():Distance(tracehymmi.HitPos) < 600 then recordedtraces_indoors[i] = 1
             else recordedtraces_indoors[i] = 0 end
-
-            --ParticleEffect("gf2_rocket_large_explosion_01", tracehymmi.HitPos, Angle( 0, 0, 0 ))
-            --local vPoint = tracehymmi.HitPos
-            --local effectdata = EffectData()
-            --effectdata:SetOrigin( vPoint )
-            --util.Effect( "Impact", effectdata )
-            --debugoverlay.Line(entity:EyePos(), tracehymmi.HitPos, 1.0)
-            
+            debugoverlay.Line(tracehymmi.StartPos, tracehymmi.HitPos, 5, Color(255, 0, 0, 255), true)      
         end
-
-            local tracedown = util.TraceLine( {  --Tracing a line to floor
-            start = entity:EyePos() +  Vector(0, 0, 1) * 1,
-            endpos = entity:EyePos() + Vector(0, 0, 1) * -10000,
-            mask = MASK_OPAQUE
-        } )
-
-        local traceup = util.TraceLine( {  --Tracing a line from floor to ceiling to measure room height
-            start = tracedown.HitPos, --Trace start offset to prevent trace hitting player
-            endpos = tracedown.HitPos + Vector(0, 0, 1) * 10000,
-            mask = MASK_OPAQUE
-        } )
         
-        roomheight = traceup.HitPos:Distance(tracedown.HitPos, traceup.Entity)
-        
-        if roomheight < 1000 && traceup.HitSky == false then
-            indoorpercentage = math.Clamp(math.average(recordedtraces_indoors) + 0.2, 0.0, 1.0) --higher chance of player being indoors if there is a ceiling above player
+        if getOutdoorsState(entity) == false then
+            indoorpercentage = math.Clamp(math.average(recordedtraces_indoors) + 0.3, 0.0, 1.0) --higher chance of player being indoors if there is a ceiling above player
         else
-            indoorpercentage = math.average(recordedtraces_indoors)
+            indoorpercentage = math.Clamp(math.average(recordedtraces_indoors), 0.0, 1.0)
         end
 
-        extensivity = math.Clamp(math.average(recordedtraces) / 9000 - 1000, 0.0, 1.0) 
-        
-        
-        print(indoorpercentage * 100)
-        print(extensivity)
-        print(currentspace)
-
-        if indoorpercentage < 0.95 then currentspace = "city" end
-        if indoorpercentage > 0.95 then currentspace = "room" end
-        if indoorpercentage < 0.4 or extensivity > 7000 then currentspace = "field" end
-
-    
+        extensivity = math.average(recordedtraces) / 9000 - 1000 
+        print(indoorpercentage)
+        if indoorpercentage < 0.90 then currentspace = "city" end
+        if indoorpercentage > 0.90 then currentspace = "room" end
+        if indoorpercentage < 0.95 and extensivity > 7000 then currentspace = "field" end
     end
     
-
     function Bulletcrack(entity)
-
         local trcrack = util.TraceHull( {
             start = entity:EyePos(),
             endpos = entity:EyePos() + ( weapon:GetOwner():GetAimVector() * 1000000),
@@ -207,21 +198,18 @@ function DynamicReverb(entity, data)
         --debugoverlay.SweptBox(entity:EyePos(), entity:EyePos(), Vector( -100, -100, -100 ), Vector( 10000, 100, 100), entity:GetAimVector():Angle(), 1, Color(255,155,0))
 
         if trcrack.Entity.IsPlayer == true then
-
             print("crack")
             net.Start("dynrev_BulletCrack")
             net.Send(trcrack.Entity)
-
         end
-
     end
     
     --if weapon:GetOwner():GetAimVector() != nil then
     --    Bulletcrack(entity)
     --end
 
-    function ReverbTheGunshot(soundtable, ammotype, desiredspace, excludespace, volumemultiplier, sidechain) -- common ammotypes include: "SMG1", "Pistol", "Buckshot", "357". leave desiredspace blank if space doesn't matter and excludespace blank to not exclude anything
-        
+    -- common ammotypes include: "SMG1", "Pistol", "Buckshot", "357". leave desiredspace blank if space doesn't matter and excludespace blank to not exclude anything
+    function ReverbTheGunshot(soundtable, ammotype, desiredspace, excludespace, volumemultiplier, sidechain)
         if ammotype == data.AmmoType or has_value(supported_ammunitions, ammotype) == false then
             if desiredspace == currentspace or desiredspace == "" then
                 if excludespace == "" or currentspace != excludespace then
@@ -267,6 +255,8 @@ function DynamicReverb(entity, data)
                         volumemultiplier = volumemultiplier * 0.6
                     end 
 
+                    print(volumemultiplier)
+
                     net.Start("dynrev_playSoundAtClient")
                         net.WriteFloat(volumemultiplier)
                         net.WriteTable(soundtable)
@@ -277,17 +267,11 @@ function DynamicReverb(entity, data)
                 end
             end
         end
-        
     end
 
-
-
-
-
     if SERVER then
-
         DetermineSpace()
-
+        // this needs to be redone. like, wtf is this?
         ReverbTheGunshot(hptailscity,     "SMG1",   "city",        "room", 1.0, false)
         ReverbTheGunshot(hptails,         "SMG1",   "field",       "room", 1.0, false)
         ReverbTheGunshot(hptailsroom,     "SMG1",   "room",        "city", math.min(indoorpercentage * 1.2, 1), false)
@@ -309,12 +293,9 @@ function DynamicReverb(entity, data)
         ReverbTheGunshot(lptailscity,    "357",     "city",       "room", 1.0, false)
         ReverbTheGunshot(lptails,        "357",     "field",      "room", 1.0, true)
         ReverbTheGunshot(lptailsroom,    "357",     "room",       "city", math.min(indoorpercentage * 1.2, 1), false)
-
-
         --print(data.AmmoType)
-
-
     end
+    print("____________________")
 end
 
 timer.Simple(0.1, function()

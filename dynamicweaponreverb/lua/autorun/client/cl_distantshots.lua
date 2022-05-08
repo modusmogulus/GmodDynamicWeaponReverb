@@ -36,8 +36,6 @@ net.Receive( "dynrev_playSoundAtClient", function( len, ply )
 
         EmitSound( Sound( firesound ), shooter:GetPos(), 1, CHAN_STATIC, 1 * volumemultiplier, 130, 0, randompitch )
         print("modified:", volumemultiplier)
-        // this sounds better, trust. - relaxtakenotes
-        if desiredspace == "room" then EmitSound( Sound( firesound ), shooter:GetPos(), 1, CHAN_STATIC, 1 * volumemultiplier, 130, 0, randompitch ) end
 
     end)
 
