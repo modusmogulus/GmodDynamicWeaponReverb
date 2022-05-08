@@ -242,15 +242,15 @@ function DynamicReverb(entity, data)
                     end
 
                     if string.startswith(weapon_class, "arccw_") and data.Distance != 20000 and weapon:GetBuff_Override("Silencer") then
-                        volumemultiplier = volumemultiplier * 0.6
+                        volumemultiplier = volumemultiplier * 0.5
                     elseif string.startswith(weapon_class, "tfa_") and weapon:GetSilenced() then
-                        volumemultiplier = volumemultiplier * 0.6
+                        volumemultiplier = volumemultiplier * 0.5
                     elseif string.startswith(weapon_class, "mg_") or weapon_class == mg_valpha then
                         for name, attachments in pairs(weapon.Customization) do
                             if name != "Muzzle" then continue end
                             local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
                             if string.find(attachment.Key, "silence") then
-                                volumemultiplier = volumemultiplier * 0.6
+                                volumemultiplier = volumemultiplier * 0.5
                             end
                         end
                     elseif string.startswith(weapon_class, "cw_") then
@@ -258,19 +258,21 @@ function DynamicReverb(entity, data)
                             if v == false then continue end
                             local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
                             if att.isSuppressor then
-                                volumemultiplier = volumemultiplier * 0.6
+                                volumemultiplier = volumemultiplier * 0.5
                             end
                         end
                     end
 
+                    if desiredspace == "field" or desiredspace == "city" then
+                        volumemultiplier = volumemultiplier * 0.5
+                    end 
+
                     net.Start("dynrev_playSoundAtClient")
-                    
                         net.WriteFloat(volumemultiplier)
                         net.WriteTable(soundtable)
                         net.WriteEntity(entity)
                         net.WriteBool(sidechain)
                         net.WriteString(desiredspace)
-
                     net.Broadcast()
                 end
             end
