@@ -180,9 +180,9 @@ function DynamicReverb(entity, data)
 
         extensivity = math.average(recordedtraces) / 9000 - 1000 
         print(indoorpercentage)
-        if indoorpercentage < 0.90 then currentspace = "city" end
-        if indoorpercentage > 0.90 then currentspace = "room" end
-        if indoorpercentage < 0.95 and extensivity > 7000 then currentspace = "field" end
+        if indoorpercentage < 0.85 then currentspace = "city" end
+        if indoorpercentage > 0.85 then currentspace = "room" end
+        if indoorpercentage < 0.85 and extensivity > 7000 then currentspace = "field" end
     end
     
     function Bulletcrack(entity)
