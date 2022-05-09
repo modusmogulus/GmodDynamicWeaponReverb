@@ -179,7 +179,6 @@ function DynamicReverb(entity, data)
         end
 
         extensivity = math.average(recordedtraces) / 9000 - 1000 
-        print(indoorpercentage)
         if indoorpercentage < 0.85 then currentspace = "city" end
         if indoorpercentage > 0.85 then currentspace = "room" end
         if indoorpercentage < 0.85 and extensivity > 7000 then currentspace = "field" end
@@ -218,13 +217,17 @@ function DynamicReverb(entity, data)
                     if weapon_owner != nil and weapon_owner:IsPlayer() and data.Attacker == weapon_owner then
                         entity_pos = weapon:GetOwner():GetPos()
                         if string.find(weapon_class, "arccw") then
-                            if data.Distance == 20000 then return end
+                            if data.Distance == 20000 then
+                                print("221: invalid")
+                                return 
+                            end
                             shoot_pos = correct_src(weapon, data.Src)
                         else
                             shoot_pos = data.Src
                         end
 
                         if Vector(entity_pos.x, entity_pos.y, 0) != Vector(shoot_pos.x, shoot_pos.y, 0) or data.Distance < 100 then
+                            print("230: invalid")
                             return
                         end
                     end
@@ -255,7 +258,13 @@ function DynamicReverb(entity, data)
                         volumemultiplier = volumemultiplier * 0.6
                     end 
 
-                    print(volumemultiplier)
+                    print("volumemultiplier:", volumemultiplier)
+                    print("soundtable:", soundtable)
+                    print("entity:", entity)
+                    print("sidechain:", sidechain)   
+                    print("desiredspace:", desiredspace)
+                    print("indoorpercentage:", indoorpercentage)
+                        
 
                     net.Start("dynrev_playSoundAtClient")
                         net.WriteFloat(volumemultiplier)
