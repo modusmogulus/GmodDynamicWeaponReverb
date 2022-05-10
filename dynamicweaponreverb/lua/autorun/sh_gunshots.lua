@@ -17,11 +17,9 @@ hptails = {
     --"distaudio/crazy_balloon.wav"
 }
 
-
 aptailsroom = {
     "distaudio/yt_gunshot_indoors1.wav", "distaudio/yt_gunshot_indoors1.wav"
 }
-
 
 bstails = {
     "tails/dynrev_buckshot_city1.wav", "tails/dynrev_buckshot_city2.wav"
@@ -30,7 +28,6 @@ bstails = {
 bstailsroom = {
     "distaudio/yt_gunshot_indoors1.wav", "distaudio/yt_gunshot_indoors1.wav"
 }
-
 
 hptailscity = {
     "tails/dynrev_highpower_city3.wav"
@@ -44,7 +41,6 @@ lptails = {
 lptailscity = {
     "tails/dynrev_highpower_city2.wav", "tails/dynrev_highpower_city1.wav"
 }
-
 
 lptailsroom = {
     --"tails/dynrev_lowpower_indoors1.wav", "tails/dynrev_lowpower_indoors2.wav",
@@ -209,6 +205,7 @@ function DynamicReverb(entity, data)
 
     -- common ammotypes include: "SMG1", "Pistol", "Buckshot", "357". leave desiredspace blank if space doesn't matter and excludespace blank to not exclude anything
     function ReverbTheGunshot(soundtable, ammotype, desiredspace, excludespace, volumemultiplier, sidechain)
+        print(data.AmmoType)
         if ammotype == data.AmmoType or has_value(supported_ammunitions, ammotype) == false then
             if desiredspace == currentspace or desiredspace == "" then
                 if excludespace == "" or currentspace != excludespace then
@@ -302,6 +299,10 @@ function DynamicReverb(entity, data)
         ReverbTheGunshot(lptailscity,    "357",     "city",       "room", 1.0, false)
         ReverbTheGunshot(lptails,        "357",     "field",      "room", 1.0, true)
         ReverbTheGunshot(lptailsroom,    "357",     "room",       "city", math.min(indoorpercentage * 1.2, 1), false)
+
+        ReverbTheGunshot(hptailscity,    "Buckshot",     "city",       "room", 1.0, false)
+        ReverbTheGunshot(hptails,        "Buckshot",     "field",      "room", 1.0, true)
+        ReverbTheGunshot(aptailsroom,    "Buckshot",     "room",       "city", math.min(indoorpercentage * 1.2, 1), false)
         --print(data.AmmoType)
     end
     print("____________________")
