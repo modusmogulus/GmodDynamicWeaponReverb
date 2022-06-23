@@ -8,7 +8,7 @@ local mediumtails = {"distaudio/clapper2_flat.wav", "distaudio/clapper2_medium.w
 local volume = 1.0
 local volumeconvar = NULL
 CreateConVar( "za_volume", 1.0, FCVAR_REPLICATED)
-
+CreateConVar( "za_enablevr", "0", FCVAR_REPLICATED )
 --SETTINGS
 
 hook.Add( "AddToolMenuCategories", "ReverbCategory", function()
@@ -44,12 +44,14 @@ end
 hook.Add( "PopulateToolMenu", "DynreverbSettings", function()
 	spawnmenu.AddToolMenuOption( "Utilities", "DynamicWeaponReverb", "menu_weapon_reverb", "#Weapon reverb world settings", "a", "a", function( panel )
 		panel:ClearControls()
+        panel:CheckBox( "Enable VR Support", "za_enablevr", true, false )
+        panel:Help("VR support disables distance checks, not recommended outside VR as it'll make this mod suck with some weapons!!")
 		panel:CheckBox( "Enable weapon reverb tails", "za_enable_reverb", true, false )
 		panel:CheckBox( "Distance gunfire", "za_server_distance_shots", true, false )
 		panel:CheckBox( "Enable outdoor reverb tails", "za_outdoors_tail", true, false )
 		panel:CheckBox( "Enable indoors reverb tails", "za_indoors_tail", true, false )
 		panel:CheckBox( "Only allow one instance of every weapon reverb tail (sounds worse but works better for some high firerate weapons)", "za_oneinstance", true, false )
-        
+
         local volumeslider = panel:NumSlider( "Volume (wont affect distance gunfire)", "za_volume", 0.0, 1.0)
         
         volumeslider.OnValueChanged = function( panel, value )

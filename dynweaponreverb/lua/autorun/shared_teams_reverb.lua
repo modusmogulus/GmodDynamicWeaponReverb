@@ -19,7 +19,9 @@ local urbantails2 = {"distaudio/clienttail_urban5.wav", "distaudio/clienttail_ur
  
 --indoors tails
 
-local roomtails = {"distaudio/hho_explosion_indoors9.wav"}
+local roomtails = {"distaudio/pyp_smg_mediumroom_self1a_44khz.wav" } 
+local roomcracks = {"distaudio/fp_room1_41khz.wav" }
+local roomcracks2 = {"distaudio/fp_room2_a.wav", "distaudio/fp_room2_b.wav" }
 local largeroomtails = {"distaudio/clienttail_roomlarge3.wav"}
 
 local roomheight = 1000
@@ -32,14 +34,14 @@ swepstoignoreND = {}
 local volumeconvar = nil --Set and updated when a weapon is fired; otherwise will cause an error
 local volume = 0.8
  
-function has_value(tbl, item)
+local function has_value(tbl, item)
     for key, value in pairs(tbl) do
         if value == item then return true end
     end
     return false
 end
 
-function correct_src(weapon, source)
+local function correct_src(weapon, source)
     -- I swear to fucking god if someone changes this in ArcCW again...
     local owner = weapon:GetOwner()
 
@@ -65,20 +67,26 @@ function correct_src(weapon, source)
     return source
 end
 
-function string.startswith(String,Start)
+function string.startswith(String, Start)
    return string.sub(String,1,string.len(Start))==Start
 end
 
-function DynamicReverb(entity, data)
+local weapon = NULL
+local reverb_range = 1
+
+local recentsound = NULL
+
+
+
+local function DynamicReverb(entity, data)
     if data.Distance < 100 then return end
-    local weapon = NULL
-    local reverb_range = 1
+
     if entity:IsPlayer() then
         weapon = entity:GetActiveWeapon()
     else
         weapon = entity
     end
-
+    
     if SERVER then
         volume = GetConVar("za_volume"):GetFloat() --Updating volume value
         if GetConVar("za_enable_reverb"):GetBool() == true then
@@ -95,8 +103,10 @@ function DynamicReverb(entity, data)
                         shoot_pos = data.Src
                     end
 
-                    if Vector(entity_pos.x, entity_pos.y, 0) != Vector(shoot_pos.x, shoot_pos.y, 0) or data.Distance < 100 then
-                        return
+                    if GetConVar("za_enablevr"):GetBool() == false then
+                        if Vector(entity_pos.x, entity_pos.y, 0) != Vector(shoot_pos.x, shoot_pos.y, 0) or data.Distance < 100 then
+                            return
+                        end
                     end
                 end
 
@@ -150,8 +160,10 @@ function DynamicReverb(entity, data)
                                 entity:StopSound(name)
                             end
                         end
-                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110 * reverb_range, 100, 1 * volume, CHAN_STATIC )
-                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 110 * reverb_range, 100, 1 * volume, CHAN_STATIC ) -- for meatier sound u can just play it twice
+                        
+                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 80 * reverb_range, 100, 0.9 * volume, CHAN_STATIC, 0, 0 )
+                        entity:EmitSound(roomcracks[ math.random( #roomcracks ) ], 80 * reverb_range, math.random(80, 110), 0.4 * volume, CHAN_STATIC, 0, 0 )
+                        entity:EmitSound(roomcracks2[ math.random( #roomcracks2 ) ], 80 * reverb_range, math.random(80, 110), 0.4 * volume, CHAN_STATIC, 0, 0 )
                     end
                 elseif roomheight < 1000 && roomheight > 200 && traceup.HitSky == false then
                     if GetConVar("za_indoors_tail"):GetBool() == true then
@@ -160,8 +172,9 @@ function DynamicReverb(entity, data)
                                 entity:StopSound(name)
                             end
                         end
-                        entity:EmitSound(largeroomtails[ math.random( #largeroomtails ) ], 95 * reverb_range, 100, 1 * volume, CHAN_STATIC ) --Large room sound
-                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 95 * reverb_range, 100, 1 * volume, CHAN_STATIC )
+                        entity:EmitSound(largeroomtails[ math.random( #largeroomtails ) ], 95 * reverb_range, 95, 0.5 * volume, CHAN_STATIC ) --Large room sound
+                        entity:EmitSound(roomtails[ math.random( #roomtails ) ], 95 * reverb_range, 100, 0.9 * volume, CHAN_STATIC )
+                        entity:EmitSound(roomcracks2[ math.random( #roomcracks2 ) ], 80 * reverb_range, math.random(80, 110), 0.6 * volume, CHAN_STATIC, 0, 0 )
                     end
                 else
                     if GetConVar("za_outdoors_tail"):GetBool() == true then
@@ -197,8 +210,8 @@ function DynamicReverb(entity, data)
     end
 end
 
-timer.Simple(3, function()
+timer.Simple(2, function()
     hook.Add("EntityFireBullets", "Teams_DynamicReverbs", DynamicReverb)
 end)
 
- 
+

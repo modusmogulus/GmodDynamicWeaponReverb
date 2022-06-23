@@ -13,6 +13,15 @@ resource.AddFile("distaudio/hho_explosion_indoors9.wav")
 resource.AddFile("distaudio/clienttail_roomlarge3.wav")
 resource.AddFile("distaudio/underwater_shot10.wav")
 
+resource.AddFile("distaudio/underwater_shot10.wav")
+
+resource.AddFile("distaudio/pyp_smg_mediumroom_self1a_44khz.wav")
+resource.AddFile("distaudio/fp_room1_41khz.wav")
+resource.AddFile("distaudio/fp_room2_a.wav")
+resource.AddFile("distaudio/fp_room2_b.wav" )
+resource.AddFile("distaudio/clienttail_roomlarge3.wav")
+
+
 
 resource.AddFile("distaudio/exp_lpg_4_44khz.wav")
 resource.AddFile("distaudio/exp_lpg_6_44khz.wav")
@@ -23,6 +32,7 @@ resource.AddFile("distaudio/exp_lpg_11_44khz.wav")
 --convars
 CreateConVar( "za_enable_reverb", "1", true, false)
 CreateConVar( "za_volume", 0.8, FCVAR_REPLICATED )
+CreateConVar( "za_enablevr", "0", FCVAR_REPLICATED )
 
 CreateConVar( "za_server_distance_shots", "1", true, false)
 CreateConVar( "za_outdoors_tail", "1", true, false)
@@ -30,13 +40,14 @@ CreateConVar( "za_indoors_tail", "1", true, false)
 
 CreateConVar( "za_oneinstance", "0", true, false)
 
+util.AddNetworkString("enableVRSupport")
 util.AddNetworkString("playSoundToClient")
 util.AddNetworkString("addIgnoreSWEP")
 util.AddNetworkString("removeIgnoreSWEP")
 util.AddNetworkString("setServerDynreverbVolumeSliderValue")
 
 
-function printTable(tab) -- for debug
+local function printTable(tab) -- for debug
 	--print("-------------table contains----------------")
 	for i, v in ipairs(tab) do
 		--print(tostring(v))
@@ -45,7 +56,7 @@ function printTable(tab) -- for debug
 end
 
 
-function removekey(tab, val)
+local function removekey(tab, val)
     for index, value in ipairs(tab) do
         if value == val then
             tab[index] = nil
@@ -54,12 +65,12 @@ function removekey(tab, val)
 end
 
 
-function saveMuteData()
+local function saveMuteData()
 	local JSONData = util.TableToJSON(swepstoignoreND)
 	file.Write("dynweaponreverbdata.json", JSONData)
 end
 
-function loadMuteData()
+local function loadMuteData()
 	local JSONData = file.Read("dynweaponreverbdata.json")
 	sharedfile.swepstoignoreND = util.JSONToTable(JSONData)
 	PrintTable(util.JSONToTable(JSONData))
