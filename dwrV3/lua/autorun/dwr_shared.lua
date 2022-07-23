@@ -10,11 +10,3 @@ hook.Add("InitPostEntity", "dwr_precache", function()
 		util.PrecacheSound(snd)
 	end
 end)
-
-
-if SERVER then
-	AddCSLuaFile( "dwr_convars.lua" )
-end
-if CLIENT then
-	include( "dwr_convars.lua" )
-end
