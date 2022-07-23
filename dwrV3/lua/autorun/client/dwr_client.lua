@@ -1,5 +1,10 @@
 print("[DWRV3] Client loaded.")
 
+-- arccw is 2hard for me to care, so no offset fixage for u
+GetConVar("arccw_enable_penetration"):SetInt(0)
+GetConVar("arccw_enable_ricochet"):SetInt(0)
+
+
 local function createUpwardsTrace(ent, offset)
 	local pos = nil
 	if ent:IsPlayer() then 
@@ -66,16 +71,28 @@ local function getEntriesStartingWith(pattern, array)
 	return tempArray
 end
 
-net.Receive("EntityFireBullets_networked", function(len)
+net.Receive("dwr_EntityFireBullets_networked", function(len)
 	-- hook data
 	local attacker = net.ReadEntity()
-	local data = net.ReadTable()
-	print("[DWR] EntityFireBullets_networked received")
+	local dataSrc = net.ReadVector()
+	local dataAmmoType = net.ReadString()
+	local weapon = NULL
+	local entity = NULL
+
+	print("[DWR] dwr_EntityFireBullets_networked received")
+
+    if not attacker:IsPlayer() and not attacker:IsNPC() then
+        weapon = attacker
+        entity = weapon:GetOwner()
+    else
+    	entity = attacker
+    	weapon = entity:GetActiveWeapon()
+    end
 
 	-- looking for reverb soundfiles to use
-	local positionState = getPositionState(attacker)
-	local distanceState = getDistanceState(data.Src, LocalPlayer():EyePos())
-	local ammoType = formatAmmoType(data.AmmoType)
+	local positionState = getPositionState(entity)
+	local distanceState = getDistanceState(dataSrc, LocalPlayer():EyePos())
+	local ammoType = formatAmmoType(dataAmmoType)
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 
