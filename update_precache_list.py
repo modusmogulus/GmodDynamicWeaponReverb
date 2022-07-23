@@ -1,4 +1,5 @@
 # run everytime you add a new sound
+# make sure the amount of sounds in each file is the same so that in dwr_client.lua (line 32) we can just do math.random(1,%amount_of_sounds%)
 
 import os
 
