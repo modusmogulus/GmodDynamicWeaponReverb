@@ -82,7 +82,7 @@ net.Receive("EntityFireBullets_networked", function(len)
 	-- https://wiki.facepunch.com/gmod/Global.EmitSound
 	-- that -2 parameter means we get to handle the sound fully by ourselves without source engine messing with it in any way. we should use that.
 	-- get some dsp effects goin, soundlevels and shiet
-	EmitSound(reverbSoundFile, attacker:GetPos(), -2, CHAN_AUTO, 1, 75, 0, 100, 0)
+	EmitSound(reverbSoundFile, attacker:GetPos(), -2, CHAN_AUTO, GetConVar("sv_dwr_volume"):GetInt() / 100, 75, 0, 100, 0)
 
 	print("[DWR] reverbSoundFile: " .. reverbSoundFile)	
 end)
@@ -101,7 +101,7 @@ hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 	-- https://wiki.facepunch.com/gmod/Global.EmitSound
 	-- that -2 parameter means we get to handle the sound fully by ourselves without source engine messing with it in any way. we should use that.
 	-- get some dsp effects goin, soundlevels and shiet
-	EmitSound(reverbSoundFile, data.Pos, -2, CHAN_AUTO, 1, 75, 0, 100, 0)
+	EmitSound("reverbSoundFile", data.Pos, -2, CHAN_AUTO, 1, 75, 0, 100, 0)
 
 	print("[DWR] reverbSoundFile: " .. reverbSoundFile)
 end)
