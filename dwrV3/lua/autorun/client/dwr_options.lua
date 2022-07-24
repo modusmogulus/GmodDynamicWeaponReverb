@@ -4,6 +4,9 @@ local function dwr_serversettings(Panel)
     Panel:NumSlider("Sound speed", "sv_dwr_soundspeed", 0, 1000)
     --Panel:CheckBox("Disable distance checks for VR", "sv_vr_disable_distance_checks", true, false)
     Panel:CheckBox("Disable soundspeed", "sv_dwr_disable_soundspeed", true, false)
+    Panel:CheckBox("Disable indoors reverb", "sv_dwr_disable_indoors_reverb", true, false)
+    Panel:CheckBox("Disable outdoors reverb", "sv_dwr_disable_outdoors_reverb", true, false)
+    Panel:CheckBox("Disable all reverb", "sv_dwr_disable_reverb", true, false)
 end
 
 local function dwr_clientsettings(Panel)

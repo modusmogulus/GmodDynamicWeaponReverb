@@ -34,7 +34,7 @@ end
 local function getDistanceState(pos1, pos2)
 	local distance = pos1:Distance(pos2)
 	-- tweak this number later plz
-	if distance > 2500 then 
+	if distance > 500 then 
 		return "distant"
 	else
 		return "close"
@@ -61,9 +61,10 @@ end
 
 local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
 
+	if GetConVar("sv_dwr_disable_reverb"):GetBool() == true then return end
 	local earpos = LocalPlayer():GetViewEntity():GetPos()
 
-	local volume = 1 * (GetConVar("sv_dwr_volume"):GetInt() / 100)
+	local volume = 1
 	local soundLevel = 0 -- sound plays everywhere
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
 	local pitch = 100
@@ -103,8 +104,8 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 
 
 	timer.Simple(delayBySoundSpeed, function()
-		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume, soundLevel, soundFlags, pitch, dsp)
-		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume, soundLevel, soundFlags, pitch, dsp)
+		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("sv_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
+		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("sv_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
 		print("[DWR] reverbSoundFile: " .. reverbSoundFile)
 		print("[DWR] volume: " .. volume)
 		print("[DWR] soundLevel: " .. soundLevel)
@@ -125,6 +126,9 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 
 	print("[DWR] dwr_EntityFireBullets_networked received")
 
+	if GetConVar("sv_dwr_disable_indoors_reverb"):GetBool() == true && getPositionState(dataSrc) == "indoors" then return end
+	if GetConVar("sv_dwr_disable_outdoors_reverb"):GetBool() == true && getPositionState(dataSrc) == "outdoors" then return end
+
 	-- looking for reverb soundfiles to use
 	local positionState = getPositionState(dataSrc)
 	local distanceState = getDistanceState(dataSrc, earpos)
@@ -138,6 +142,8 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 end)
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
+
+	
 
 	local earpos = LocalPlayer():GetViewEntity():GetPos()
 
