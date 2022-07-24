@@ -28,7 +28,8 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     end
 
     net.Start("dwr_EntityFireBullets_networked")
-        net.WriteEntity(attacker)
+        net.WriteEntity(entity)
+        net.WriteEntity(weapon)
         net.WriteVector(data.Src)
         net.WriteString(data.AmmoType)
     net.Broadcast()

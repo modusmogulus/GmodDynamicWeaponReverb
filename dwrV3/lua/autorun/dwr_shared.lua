@@ -10,3 +10,4 @@ hook.Add("InitPostEntity", "dwr_precache", function()
 		util.PrecacheSound(snd)
 	end
 end)
+

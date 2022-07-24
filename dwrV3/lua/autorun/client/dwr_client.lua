@@ -46,7 +46,7 @@ end
 local function getDistanceState(pos1, pos2)
 	local distance = pos1:Distance(pos2)
 	-- tweak this number later plz
-	if distance > 1000 then 
+	if distance > 2000 then 
 		return "distant"
 	else
 		return "close"
@@ -71,23 +71,46 @@ local function getEntriesStartingWith(pattern, array)
 	return tempArray
 end
 
+local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
+	local volume = 1
+	local soundLevel = SNDLVL_NONE -- sound plays everywhere
+	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
+	local pitch = 100
+	local dsp = 0 -- https://developer.valvesoftware.com/wiki/Dsp_presets
+
+    local traceToShooter = util.TraceLine( {
+        start = LocalPlayer():EyePos(),
+        endpos = shooter:GetPos() + Vector(0,0,32),
+        filter = LocalPlayer()
+    })
+
+    local direct = (trace_to_shooter.Entity == shooter)
+
+    if not direct:
+    	if distanceState == "distant":
+			dsp = 30 -- lowpass
+			volume = volume * 0.5
+		else:
+			volume = volume * 0.8
+		end
+
+	if distanceState == "close":
+		local distance = LocalPlayer():EyePos():Distance(dataSrc) * 0.01905 -- in meters
+		local distanceMultiplier = 1 / distance^2
+		volume = volume * distanceMultiplier
+	end
+
+	EmitSound(reverbSoundFile, attacker:GetPos(), -2, CHAN_STATIC, volume, soundLevel, soundFlags, pitch, dsp)	
+end
+
 net.Receive("dwr_EntityFireBullets_networked", function(len)
 	-- hook data
-	local attacker = net.ReadEntity()
+	local entity = net.ReadEntity()
+	local weapon = net.ReadEntity()
 	local dataSrc = net.ReadVector()
 	local dataAmmoType = net.ReadString()
-	local weapon = NULL
-	local entity = NULL
 
 	print("[DWR] dwr_EntityFireBullets_networked received")
-
-    if not attacker:IsPlayer() and not attacker:IsNPC() then
-        weapon = attacker
-        entity = weapon:GetOwner()
-    else
-    	entity = attacker
-    	weapon = entity:GetActiveWeapon()
-    end
 
 	-- looking for reverb soundfiles to use
 	local positionState = getPositionState(entity)
@@ -96,12 +119,11 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 
-	-- https://wiki.facepunch.com/gmod/Global.EmitSound
-	-- that -2 parameter means we get to handle the sound fully by ourselves without source engine messing with it in any way. we should use that.
-	-- get some dsp effects goin, soundlevels and shiet
-	EmitSound(reverbSoundFile, attacker:GetPos(), -2, CHAN_AUTO, GetConVar("sv_dwr_volume"):GetInt() / 100, 75, 0, 100, 0)
+	print("[DWR] reverbSoundFile: " .. reverbSoundFile)
 
-	print("[DWR] reverbSoundFile: " .. reverbSoundFile)	
+	local customVolumeMultiplier = 1
+
+	playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
 end)
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
@@ -115,10 +137,9 @@ hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 
-	-- https://wiki.facepunch.com/gmod/Global.EmitSound
-	-- that -2 parameter means we get to handle the sound fully by ourselves without source engine messing with it in any way. we should use that.
-	-- get some dsp effects goin, soundlevels and shiet
-	EmitSound(reverbSoundFile, data.Pos, -2, CHAN_AUTO, 1, 75, 0, 100, 0)
-
 	print("[DWR] reverbSoundFile: " .. reverbSoundFile)
+
+	local customVolumeMultiplier = 1
+
+	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, customVolumeMultiplier)
 end)
