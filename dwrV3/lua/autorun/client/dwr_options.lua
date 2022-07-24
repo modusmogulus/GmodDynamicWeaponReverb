@@ -1,8 +1,8 @@
 
 local function dwr_serversettings(Panel)
     Panel:NumSlider("Addon volume", "sv_dwr_volume", 0, 100)
-    Panel:NumSlider("Sound speed", "sv_dwr_soundspeed", 0, 100)
-    Panel:CheckBox("Disable distance checks for VR", "sv0_vr_disable_distance_checks", true, false)
+    Panel:NumSlider("Sound speed", "sv_dwr_soundspeed", 0, 1000)
+    --Panel:CheckBox("Disable distance checks for VR", "sv_vr_disable_distance_checks", true, false)
     Panel:CheckBox("Disable soundspeed", "sv_dwr_disable_soundspeed", true, false)
 end
 
