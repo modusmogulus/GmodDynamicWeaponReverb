@@ -1,5 +1,7 @@
 print("[DWRV3] Client loaded.")
 
+
+
 local function traceableToSky(pos, offset)
     local tr = util.TraceLine({start=pos + offset, endpos=pos + Vector(offset.x, offset.y, 100000000), mask=MASK_NPCWORLDSTATIC})
 	local temp = util.TraceLine({start=tr.StartPos, endpos=pos, mask=MASK_NPCWORLDSTATIC})
@@ -58,14 +60,17 @@ local function getEntriesStartingWith(pattern, array)
 end
 
 local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
-	local volume = 1
+
+	local earpos = LocalPlayer():GetViewEntity():GetPos()
+
+	local volume = 1 * (GetConVar("sv_dwr_volume"):GetInt() / 100)
 	local soundLevel = 0 -- sound plays everywhere
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
 	local pitch = 100
 	local dsp = 0 -- https://developer.valvesoftware.com/wiki/Dsp_presets
 
     local traceToSrc = util.TraceLine( {
-        start = LocalPlayer():GetShootPos(),
+        start = earpos,
         endpos = dataSrc,
         filter = LocalPlayer(),
         mask = MASK_NPCWORLDSTATIC
@@ -83,24 +88,35 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	end
 
 	if distanceState == "close" then
-		local distance = LocalPlayer():EyePos():Distance(dataSrc) * 0.01905 -- in meters
+		local distance = earpos:Distance(dataSrc) * 0.01905 -- in meters
 		local distanceMultiplier = 500/distance^2
 		volume = math.Clamp(volume * distanceMultiplier, 0, 1)
 		print(distance)
 	end
 
-	EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume, soundLevel, soundFlags, pitch, dsp)
-	EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume, soundLevel, soundFlags, pitch, dsp)
-	print("[DWR] reverbSoundFile: " .. reverbSoundFile)
-	print("[DWR] volume: " .. volume)
-	print("[DWR] soundLevel: " .. soundLevel)
-	print("[DWR] soundFlags: " .. soundFlags)
-	print("[DWR] pitch: " .. pitch)
-	print("[DWR] dsp: " .. dsp)
-	print("--------------------------------------------")
+	local delayBySoundSpeed
+	if GetConVar("sv_dwr_disable_soundspeed"):GetBool() == false then
+		delayBySoundSpeed = dataSrc:Distance(earpos) * 0.01905 / GetConVar("sv_dwr_soundspeed"):GetInt()
+	else
+		delayBySoundSpeed = 0
+	end
+
+
+	timer.Simple(delayBySoundSpeed, function()
+		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume, soundLevel, soundFlags, pitch, dsp)
+		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume, soundLevel, soundFlags, pitch, dsp)
+		print("[DWR] reverbSoundFile: " .. reverbSoundFile)
+		print("[DWR] volume: " .. volume)
+		print("[DWR] soundLevel: " .. soundLevel)
+		print("[DWR] soundFlags: " .. soundFlags)
+		print("[DWR] pitch: " .. pitch)
+		print("[DWR] dsp: " .. dsp)
+		print("--------------------------------------------")
+	end)
 end
 
 net.Receive("dwr_EntityFireBullets_networked", function(len)
+	local earpos = LocalPlayer():GetViewEntity():GetPos()
 	-- hook data
 	local entity = net.ReadEntity()
 	local weapon = net.ReadEntity()
@@ -111,7 +127,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 
 	-- looking for reverb soundfiles to use
 	local positionState = getPositionState(dataSrc)
-	local distanceState = getDistanceState(dataSrc, LocalPlayer():EyePos())
+	local distanceState = getDistanceState(dataSrc, earpos)
 	local ammoType = formatAmmoType(dataAmmoType)
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
@@ -122,12 +138,15 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 end)
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
+
+	local earpos = LocalPlayer():GetViewEntity():GetPos()
+
 	if not string.find(data.SoundName, "explo") then return end
 	print("[DWR] EntityEmitSound")
 
 	-- looking for reverb soundfiles to use
 	local positionState = getPositionState(data.Pos)
-	local distanceState = getDistanceState(data.Pos, LocalPlayer():EyePos())
+	local distanceState = getDistanceState(data.Pos, earpos)
 	local ammoType = "Explosions"
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]

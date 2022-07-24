@@ -1,9 +1,11 @@
 print("[DWRV3] Server loaded.")
 
 -- arccw is 2hard for me to care, so no offset fixage for u
-GetConVar("arccw_enable_penetration"):SetInt(0)
-GetConVar("arccw_enable_ricochet"):SetInt(0)
 
+if ConVarExists("arccw_enable_penetration") then --otherwise whole addon wont work without arccw
+    GetConVar("arccw_enable_penetration"):SetInt(0)
+    GetConVar("arccw_enable_ricochet"):SetInt(0)
+end
 util.AddNetworkString("dwr_EntityFireBullets_networked")
 
 

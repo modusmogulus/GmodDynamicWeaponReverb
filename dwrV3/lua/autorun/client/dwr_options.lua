@@ -1,8 +1,9 @@
 
 local function dwr_serversettings(Panel)
-	Panel:AddControl("Header", {description = "Server Settings"})
-    Panel:AddControl("Slider", {Label = "Global volume", min=0, max=100, Command = "sv_dwr_volume"})
-    Panel:AddControl("CheckBox", {Label = "VR-Support/Disable distance checks when in VR", "sv_vr_disable_distance_checks"}) --for future, will be combined with vrmod.IsPlayerInVR( player )
+    Panel:NumSlider("Addon volume", "sv_dwr_volume", 0, 100)
+    Panel:NumSlider("Sound speed", "sv_dwr_soundspeed", 0, 100)
+    Panel:CheckBox("Disable distance checks for VR", "sv0_vr_disable_distance_checks", true, false)
+    Panel:CheckBox("Disable soundspeed", "sv_dwr_disable_soundspeed", true, false)
 end
 
 local function dwr_clientsettings(Panel)
