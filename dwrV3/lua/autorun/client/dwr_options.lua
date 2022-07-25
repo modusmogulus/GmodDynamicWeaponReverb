@@ -1,5 +1,8 @@
 
 local function dwr_serversettings(Panel)
+
+    if LocalPlayer():IsAdmin() == false then return end
+
     Panel:NumSlider("Addon volume", "sv_dwr_volume", 0, 100)
     Panel:NumSlider("Sound speed", "sv_dwr_soundspeed", 0, 1000)
     --Panel:CheckBox("Disable distance checks for VR", "sv_vr_disable_distance_checks", true, false)

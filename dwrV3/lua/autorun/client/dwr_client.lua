@@ -59,7 +59,7 @@ local function getEntriesStartingWith(pattern, array)
 	return tempArray
 end
 
-local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
+local function playReverb(reverbSoundFile, positionState, distanceState, distance, dataSrc, customVolumeMultiplier)
 	if GetConVar("sv_dwr_disable_reverb"):GetBool() == true then return end
 	local earpos = LocalPlayer():GetViewEntity():GetPos()
 
@@ -82,7 +82,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
     local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
 
     if not direct then
-    	if distanceState == "distant" then
+    	if distance > 1000 then
 			dsp = 30 -- lowpass
 		end
 		volume = volume * 0.5
@@ -121,6 +121,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local weapon = net.ReadEntity()
 	local dataSrc = net.ReadVector()
 	local dataAmmoType = net.ReadString()
+	local distance = dataSrc:Distance(earpos)
 
 	print("[DWR] dwr_EntityFireBullets_networked received")
 
@@ -137,7 +138,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 
 	local customVolumeMultiplier = 1
 
-	playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
+	playReverb(reverbSoundFile, positionState, distanceState, distance, dataSrc, customVolumeMultiplier)
 end)
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
@@ -146,14 +147,15 @@ hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 	if not string.find(data.SoundName, "explo") then return end
 	print("[DWR] EntityEmitSound (Explosion)")
 
-	-- looking for reverb soundfiles to use
+	-- looking for reverb soundfiles to uses
 	local positionState = getPositionState(data.Pos)
 	local distanceState = getDistanceState(data.Pos, earpos)
 	local ammoType = "Explosions"
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
+	local distance = data.Pos:Distance(earpos)
 
 	local customVolumeMultiplier = 1
 
-	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, customVolumeMultiplier)
+	playReverb(reverbSoundFile, positionState, distanceState, distance, customVolumeMultiplier)
 end)
