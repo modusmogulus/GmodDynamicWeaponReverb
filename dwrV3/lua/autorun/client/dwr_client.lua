@@ -118,8 +118,9 @@ end
 net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local earpos = LocalPlayer():GetViewEntity():GetPos()
 	-- hook data
-	local entity = net.ReadEntity()
-	local weapon = net.ReadEntity()
+	-- we dont use any of these here. we only use them serverside
+	--local entity = net.ReadEntity()
+	--local weapon = net.ReadEntity()
 	local dataSrc = net.ReadVector()
 	local dataAmmoType = net.ReadString()
 
