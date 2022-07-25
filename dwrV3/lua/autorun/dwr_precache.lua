@@ -6,7 +6,7 @@ dwr_reverbFiles = {'dwr/357/indoors/close/1.wav', 'dwr/357/indoors/close/2.wav',
 dwr_supportedAmmoTypes = {'357', 'AR2', 'Buckshot', 'Pistol', 'SMG1'} -- there's also "other" and "explosions" in the sound directory but we use them differently
 
 hook.Add("InitPostEntity", "dwr_precache", function()
-	for _, snd in ipairs(dwr_reverbFiles) do
+	for _, snd in pairs(dwr_reverbFiles) do
 		util.PrecacheSound(snd)
 	end
 end)
