@@ -59,7 +59,7 @@ local function getEntriesStartingWith(pattern, array)
 	return tempArray
 end
 
-local function playReverb(reverbSoundFile, positionState, distanceState, distance, dataSrc, customVolumeMultiplier)
+local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
 	if GetConVar("sv_dwr_disable_reverb"):GetBool() == true then return end
 	local earpos = LocalPlayer():GetViewEntity():GetPos()
 
@@ -68,6 +68,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, distanc
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
 	local pitch = 100
 	local dsp = 0 -- https://developer.valvesoftware.com/wiki/Dsp_presets
+	local distance = dataSrc:Distance(earpos)
 
     local traceToSrc = util.TraceLine( {
         start = earpos,
@@ -121,7 +122,6 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local weapon = net.ReadEntity()
 	local dataSrc = net.ReadVector()
 	local dataAmmoType = net.ReadString()
-	local distance = dataSrc:Distance(earpos)
 
 	print("[DWR] dwr_EntityFireBullets_networked received")
 
@@ -138,7 +138,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 
 	local customVolumeMultiplier = 1
 
-	playReverb(reverbSoundFile, positionState, distanceState, distance, dataSrc, customVolumeMultiplier)
+	playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
 end)
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
@@ -153,9 +153,8 @@ hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 	local ammoType = "Explosions"
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
-	local distance = data.Pos:Distance(earpos)
 
 	local customVolumeMultiplier = 1
 
-	playReverb(reverbSoundFile, positionState, distanceState, distance, customVolumeMultiplier)
+	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, customVolumeMultiplier)
 end)
