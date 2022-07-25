@@ -31,9 +31,9 @@ local function getPositionState(pos)
 end
 
 local function getDistanceState(pos1, pos2)
-	local distance = pos1:Distance(pos2)
+	local distance = pos1:Distance(pos2) * 0.01905 -- meters l0l
 	-- tweak this number later plz
-	if distance > 500 then 
+	if distance > 50 then 
 		return "distant"
 	else
 		return "close"
@@ -76,23 +76,22 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
         mask = MASK_NPCWORLDSTATIC
     })
 
-    local direct = (traceToSrc.HitPos == dataSrc)
-
-    print(table.ToString(traceToSrc, "traceToSrc", true))
+    -- i hate floats
+    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
+    local x2,y2,z2 = math.floor(dataSrc:Unpack())
+    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
 
     if not direct then
     	if distanceState == "distant" then
 			dsp = 30 -- lowpass
-			volume = volume * 0.5
-		else
-			volume = volume * 0.8
 		end
+		volume = volume * 0.5
 	end
 
 	if distanceState == "close" then
 		local distance = earpos:Distance(dataSrc) * 0.01905 -- in meters
-		local distanceMultiplier = 500/distance^2
-		volume = math.Clamp(volume * distanceMultiplier, 0, 1)
+		local distanceMultiplier = math.Clamp(500/distance^2, 0, 1)
+		volume = volume * distanceMultiplier
 		print("[DWR] Distance (Meters): " .. distance)
 	end
 
