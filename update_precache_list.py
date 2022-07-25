@@ -29,5 +29,5 @@ precacheLua += "end)\n"
 
 print(precacheLua)
 
-with open("dwrV3\\lua\\autorun\\dwr_shared.lua", "w+") as file:
+with open("dwrV3\\lua\\autorun\\dwr_precache.lua", "w+") as file:
 	file.write(precacheLua)
