@@ -11,6 +11,7 @@ local function traceableToSky(pos, offset)
     return false
 end
 
+
 local function getOutdoorsState(pos)
     local tr_1 = traceableToSky(pos, Vector(0,0,0))
     local tr_2 = traceableToSky(pos, Vector(120,0,0))
@@ -40,6 +41,7 @@ local function getDistanceState(pos1, pos2)
 end
 
 local function formatAmmoType(ammoType)
+	print("[DWR] ammoType to be formatted: " .. ammoType)
 	if table.HasValue(dwr_supportedAmmoTypes, ammoType) then
 		return ammoType
 	else
@@ -76,6 +78,8 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 
     local direct = (traceToSrc.HitPos == dataSrc)
 
+    print(table.ToString(traceToSrc, "traceToSrc", true))
+
     if not direct then
     	if distanceState == "distant" then
 			dsp = 30 -- lowpass
@@ -100,7 +104,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	timer.Simple(delayBySoundSpeed, function()
 		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("sv_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
 		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("sv_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
-		print("[DWR] delayBySoundSpeed: ", .. delayBySoundSpeed)
+		print("[DWR] delayBySoundSpeed: " .. delayBySoundSpeed)
 		print("[DWR] reverbSoundFile: " .. reverbSoundFile)
 		print("[DWR] volume: " .. volume)
 		print("[DWR] soundLevel: " .. soundLevel)

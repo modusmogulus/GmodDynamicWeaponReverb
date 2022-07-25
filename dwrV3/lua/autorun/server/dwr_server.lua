@@ -21,7 +21,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     end
 
     local weaponClass = weapon:GetClass()
-    local entityShootPos = entity:EyePos()
+    local entityShootPos = entity:GetShootPos()
     if string.find(weaponClass, "arccw") then
         if dataDistance == 20000 or data.Distance < 100 then
             print("[DWR] Skipping bullet because it's... not a bullet!")
