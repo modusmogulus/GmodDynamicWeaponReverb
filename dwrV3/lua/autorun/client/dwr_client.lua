@@ -41,7 +41,7 @@ local function getDistanceState(pos1, pos2)
 end
 
 local function formatAmmoType(ammoType)
-	print("[DWR] ammoType to be formatted: " .. ammoType)
+	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] ammoType to be formatted: " .. ammoType) end
 	if table.HasValue(dwr_supportedAmmoTypes, ammoType) then
 		return ammoType
 	else
@@ -61,6 +61,7 @@ end
 
 local function traceableToPos(earpos, pos, offset)
 	offset = offset * 1000000000
+
 	local localPlayer = LocalPlayer()
     local traceToOffset = util.TraceLine( {
         start = earpos,
@@ -75,16 +76,17 @@ local function traceableToPos(earpos, pos, offset)
         mask = MASK_NPCWORLDSTATIC
     })
 
-    local color = Color(0,0,0)
+    if GetConVar("cl_dwr_debug"):GetInt() == 1 then
+	    local color = Color(0,0,0)
 
-    if traceFromOffsetToPos.HitPos == pos then
-    	color = Color(0,255,0)
-    else
-    	color = Color(255,0,0)
-    end
-
-    debugoverlay.Line(traceToOffset.HitPos, traceToOffset.StartPos, 5, color, true)
-    debugoverlay.Line(traceFromOffsetToPos.HitPos, traceFromOffsetToPos.StartPos, 5, color, true)
+	    if traceFromOffsetToPos.HitPos == pos then
+	    	color = Color(0,255,0)
+	    else
+	    	color = Color(255,0,0)
+	    end
+	    debugoverlay.Line(traceToOffset.HitPos, traceToOffset.StartPos, 5, color, true)
+	    debugoverlay.Line(traceFromOffsetToPos.HitPos, traceFromOffsetToPos.StartPos, 5, color, true)
+	end
 
     return (traceFromOffsetToPos.HitPos == pos)
 end
@@ -96,7 +98,7 @@ end
 
 local function getOcclusionPercent(earpos, pos)
 	local singletrace = Vector(1, 0, 0) * 100000000
-	local traceAmount = 10
+	local traceAmount = GetConVar("cl_dwr_occlusion_rays"):GetInt()
 	local degrees = 360/traceAmount
 	local savedTraces = {}
 	local successfulTraces = 0
@@ -111,22 +113,26 @@ local function getOcclusionPercent(earpos, pos)
 		successfulTraces = successfulTraces + boolToInt(traceableToPos(earpos, pos, singletrace))
 	end
 
+	successfulTraces = math.Clamp(successfulTraces, 0, traceAmount) -- why the FUCK does it go over the traceamount
+
 	local failedTraces = traceAmount - successfulTraces
 	local percentageOfFailedTraces = failedTraces / traceAmount
-    print("[DWR] successfulTraces: ", successfulTraces)
-    print("[DWR] failedTraces: ", failedTraces)
-    print("[DWR] percentageOfFailedTraces: ", percentageOfFailedTraces)
+
+	if GetConVar("cl_dwr_debug"):GetInt() == 1 then
+	    print("[DWR] successfulTraces: ", successfulTraces)
+	    print("[DWR] failedTraces: ", failedTraces)
+	    print("[DWR] percentageOfFailedTraces: ", percentageOfFailedTraces)
+	end
+
 	return percentageOfFailedTraces
 end
 
 local function calculateSoundspeedDelay(pos1, pos2)
-	
-	return pos1:Distance(pos2) * 0.01905 / GetConVar("sv_dwr_soundspeed"):GetInt()
-
+	return pos1:Distance(pos2) * 0.01905 / GetConVar("cl_dwr_soundspeed"):GetInt()
 end
 
 local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
-	if GetConVar("sv_dwr_disable_reverb"):GetBool() == true then return end
+	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
 	local localPlayer = LocalPlayer()
 	local earpos = localPlayer:GetViewEntity():GetPos()
 
@@ -134,8 +140,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	local soundLevel = 0 -- sound plays everywhere
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
 	local pitch = 100
-	local dsp = 0 -- https://developer.valvesoftware.com/wiki/Dsp_presets
-	local distance = dataSrc:Distance(earpos)
+	local dsp = 0 -- https://cl_dwr_debug.valvesoftware.com/wiki/Dsp_presets
 
     local traceToSrc = util.TraceLine( {
         start = earpos,
@@ -160,42 +165,40 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	local distance = earpos:Distance(dataSrc) * 0.01905 -- in meters
 	local distanceMultiplier = math.Clamp(3000/distance^2, 0, 1)
 	volume = volume * distanceMultiplier
-	print("[DWR] Distance (Meters): " .. distance)
 
 	local delayBySoundSpeed = 0
-	if GetConVar("sv_dwr_disable_soundspeed"):GetBool() == false then
+	if not GetConVar("cl_dwr_disable_soundspeed"):GetBool() then
 		delayBySoundSpeed = calculateSoundspeedDelay(dataSrc, earpos)
 	end
 
 	timer.Simple(delayBySoundSpeed, function()
-		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("sv_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
-		print("[DWR] delayBySoundSpeed: " .. delayBySoundSpeed)
-		print("[DWR] reverbSoundFile: " .. reverbSoundFile)
-		print("[DWR] volume: " .. volume)
-		print("[DWR] soundLevel: " .. soundLevel)
-		print("[DWR] soundFlags: " .. soundFlags)
-		print("[DWR] pitch: " .. pitch)
-		print("[DWR] dsp: " .. dsp)
-		print("--------------------------------------------")
+		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
+		if GetConVar("cl_dwr_debug"):GetInt() == 1 then
+			print("[DWR] Distance (Meters): " .. distance)
+			print("[DWR] delayBySoundSpeed: " .. delayBySoundSpeed)
+			print("[DWR] reverbSoundFile: " .. reverbSoundFile)
+			print("[DWR] volume: " .. volume)
+			print("[DWR] soundLevel: " .. soundLevel)
+			print("[DWR] soundFlags: " .. soundFlags)
+			print("[DWR] pitch: " .. pitch)
+			print("[DWR] dsp: " .. dsp)
+			print("--------------------------------------------")
+		end
 	end)
 end
 
 net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local earpos = LocalPlayer():GetViewEntity():GetPos()
-	-- hook data
-	-- we dont use any of these here. we only use them serverside
-	--local entity = net.ReadEntity()
-	--local weapon = net.ReadEntity()
 	local dataSrc = net.ReadVector()
 	local dataAmmoType = net.ReadString()
 
-	print("[DWR] dwr_EntityFireBullets_networked received")
+	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_EntityFireBullets_networked received") end
 
 	-- looking for reverb soundfiles to use
 	local positionState = getPositionState(dataSrc)
 
-	if GetConVar("sv_dwr_disable_indoors_reverb"):GetBool() == true && positionState == "indoors" then return end
-	if GetConVar("sv_dwr_disable_outdoors_reverb"):GetBool() == true && positionState == "outdoors" then return end
+	if GetConVar("cl_dwr_disable_indoors_reverb"):GetBool() == true && positionState == "indoors" then return end
+	if GetConVar("cl_dwr_disable_outdoors_reverb"):GetBool() == true && positionState == "outdoors" then return end
 
 	local distanceState = getDistanceState(dataSrc, earpos)
 	local ammoType = formatAmmoType(dataAmmoType)
@@ -212,7 +215,7 @@ function explosionReverb(data)
 	local earpos = LocalPlayer():GetViewEntity():GetPos()
 
 	if not string.find(data.SoundName, "explo") then return end
-	print("[DWR] EntityEmitSound (Explosion)")
+	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound") end
 	
 	-- looking for reverb soundfiles to uses
 	local positionState = getPositionState(data.Pos)
@@ -228,7 +231,5 @@ end
 
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
-
 	explosionReverb(data)
-
 end)
