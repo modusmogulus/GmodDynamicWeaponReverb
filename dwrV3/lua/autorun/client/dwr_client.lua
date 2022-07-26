@@ -33,7 +33,7 @@ end
 local function getDistanceState(pos1, pos2)
 	local distance = pos1:Distance(pos2) * 0.01905 -- meters l0l
 	-- tweak this number later plz
-	if distance > 50 then 
+	if distance > 100 then 
 		return "distant"
 	else
 		return "close"
@@ -141,6 +141,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
 	local pitch = 100
 	local dsp = 0 -- https://cl_dwr_debug.valvesoftware.com/wiki/Dsp_presets
+	local distance = earpos:Distance(dataSrc) * 0.01905 -- in meters
 
     local traceToSrc = util.TraceLine( {
         start = earpos,
@@ -162,9 +163,10 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 		volume = volume * 0.5
 	end
 
-	local distance = earpos:Distance(dataSrc) * 0.01905 -- in meters
-	local distanceMultiplier = math.Clamp(3000/distance^2, 0, 1)
-	volume = volume * distanceMultiplier
+	if distanceState == "close" then
+		local distanceMultiplier = math.Clamp(3000/distance^2, 0, 1)
+		volume = volume * distanceMultiplier
+	end
 
 	local delayBySoundSpeed = 0
 	if not GetConVar("cl_dwr_disable_soundspeed"):GetBool() then
