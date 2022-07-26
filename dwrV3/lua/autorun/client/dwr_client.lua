@@ -59,9 +59,55 @@ local function getEntriesStartingWith(pattern, array)
 	return tempArray
 end
 
+local function traceableToPos(earpos, pos, offset)
+	offset = offset * 1000000000
+	local localPlayer = LocalPlayer()
+    local traceToOffset = util.TraceLine( {
+        start = earpos,
+        endpos = earpos + offset,
+        filter = localPlayer,
+        mask = MASK_NPCWORLDSTATIC
+    })
+    local traceFromOffsetToPos = util.TraceLine( {
+        start = traceToOffset.HitPos,
+        endpos = pos,
+        filter = localPlayer,
+        mask = MASK_NPCWORLDSTATIC
+    })
+
+    return (traceFromOffsetToPos.HitPos == pos)
+end
+
+function boolToInt(value)
+	-- oh come on lua, fuck you.
+  	return value and 1 or 0
+end
+
+local function getOcclusionPercent(earpos, pos)
+	-- incredibly retarded way of calculating sound occlusion
+	-- don't kill me plz
+	local tr_1 = traceableToPos(earpos, pos, Vector(-1,0,0))
+	local tr_2 = traceableToPos(earpos, pos, Vector(1,0,0))
+	local tr_3 = traceableToPos(earpos, pos, Vector(0,-1,0))
+	local tr_4 = traceableToPos(earpos, pos, Vector(0,1,0))
+	local tr_5 = traceableToPos(earpos, pos, Vector(0,0,-1))
+	local tr_6 = traceableToPos(earpos, pos, Vector(0,0,1))
+
+	local successfulTraces = boolToInt(tr_1) + boolToInt(tr_2) + boolToInt(tr_3) + boolToInt(tr_4) + boolToInt(tr_5) + boolToInt(tr_6)
+	local failedTraces = 6 - successfulTraces
+	local percentageOfFailedTraces = failedTraces / 6 * 100
+    print("[DWR] successfulTraces: ", successfulTraces)
+    print("[DWR] failedTraces: ", failedTraces)
+    print("[DWR] percentageOfFailedTraces: ", percentageOfFailedTraces)
+
+
+	return percentageOfFailedTraces
+end
+
 local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
 	if GetConVar("sv_dwr_disable_reverb"):GetBool() == true then return end
-	local earpos = LocalPlayer():GetViewEntity():GetPos()
+	local localPlayer = LocalPlayer()
+	local earpos = localPlayer:GetViewEntity():GetPos()
 
 	local volume = 1
 	local soundLevel = 0 -- sound plays everywhere
@@ -73,7 +119,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
     local traceToSrc = util.TraceLine( {
         start = earpos,
         endpos = dataSrc,
-        filter = LocalPlayer(),
+        filter = localPlayer,
         mask = MASK_NPCWORLDSTATIC
     })
 
@@ -83,18 +129,17 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
     local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
 
     if not direct then
-    	if distance > 1000 then
+	    local occlusionPercentage = getOcclusionPercent(earpos, dataSrc)
+    	if occlusionPercentage == 100 then
 			dsp = 30 -- lowpass
 		end
 		volume = volume * 0.5
 	end
 
-	if distanceState == "close" then
-		local distance = earpos:Distance(dataSrc) * 0.01905 -- in meters
-		local distanceMultiplier = math.Clamp(500/distance^2, 0, 1)
-		volume = volume * distanceMultiplier
-		print("[DWR] Distance (Meters): " .. distance)
-	end
+	local distance = earpos:Distance(dataSrc) * 0.01905 -- in meters
+	local distanceMultiplier = math.Clamp(3000/distance^2, 0, 1)
+	volume = volume * distanceMultiplier
+	print("[DWR] Distance (Meters): " .. distance)
 
 	local delayBySoundSpeed = 0
 	if GetConVar("sv_dwr_disable_soundspeed"):GetBool() == false then
