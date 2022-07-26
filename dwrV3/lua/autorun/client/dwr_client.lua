@@ -75,6 +75,17 @@ local function traceableToPos(earpos, pos, offset)
         mask = MASK_NPCWORLDSTATIC
     })
 
+    local color = Color(0,0,0)
+
+    if traceFromOffsetToPos.HitPos == pos then
+    	color = Color(0,255,0)
+    else
+    	color = Color(255,0,0)
+    end
+
+    debugoverlay.Line(traceToOffset.HitPos, traceToOffset.StartPos, 5, color, true)
+    debugoverlay.Line(traceFromOffsetToPos.HitPos, traceFromOffsetToPos.StartPos, 5, color, true)
+
     return (traceFromOffsetToPos.HitPos == pos)
 end
 
@@ -84,23 +95,27 @@ function boolToInt(value)
 end
 
 local function getOcclusionPercent(earpos, pos)
-	-- incredibly retarded way of calculating sound occlusion
-	-- don't kill me plz
-	local tr_1 = traceableToPos(earpos, pos, Vector(-1,0,0))
-	local tr_2 = traceableToPos(earpos, pos, Vector(1,0,0))
-	local tr_3 = traceableToPos(earpos, pos, Vector(0,-1,0))
-	local tr_4 = traceableToPos(earpos, pos, Vector(0,1,0))
-	local tr_5 = traceableToPos(earpos, pos, Vector(0,0,-1))
-	local tr_6 = traceableToPos(earpos, pos, Vector(0,0,1))
+	local singletrace = Vector(1, 0, 0) * 100000000
+	local traceAmount = 10
+	local degrees = 360/traceAmount
+	local savedTraces = {}
+	local successfulTraces = 0
 
-	local successfulTraces = boolToInt(tr_1) + boolToInt(tr_2) + boolToInt(tr_3) + boolToInt(tr_4) + boolToInt(tr_5) + boolToInt(tr_6)
-	local failedTraces = 6 - successfulTraces
-	local percentageOfFailedTraces = failedTraces / 6 * 100
+	for i=1, traceAmount, 1 do
+		singletrace:Rotate(Angle(0,degrees))
+		successfulTraces = successfulTraces + boolToInt(traceableToPos(earpos, pos, singletrace))
+	end
+
+	for i=1, traceAmount, 1 do
+		singletrace:Rotate(Angle(degrees,0))
+		successfulTraces = successfulTraces + boolToInt(traceableToPos(earpos, pos, singletrace))
+	end
+
+	local failedTraces = traceAmount - successfulTraces
+	local percentageOfFailedTraces = failedTraces / traceAmount
     print("[DWR] successfulTraces: ", successfulTraces)
     print("[DWR] failedTraces: ", failedTraces)
     print("[DWR] percentageOfFailedTraces: ", percentageOfFailedTraces)
-
-
 	return percentageOfFailedTraces
 end
 
@@ -130,7 +145,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 
     if not direct then
 	    local occlusionPercentage = getOcclusionPercent(earpos, dataSrc)
-    	if occlusionPercentage == 100 then
+    	if occlusionPercentage == 1 then
 			dsp = 30 -- lowpass
 		end
 		volume = volume * 0.5
