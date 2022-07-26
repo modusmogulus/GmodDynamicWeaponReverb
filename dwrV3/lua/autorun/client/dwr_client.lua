@@ -169,7 +169,6 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 
 	timer.Simple(delayBySoundSpeed, function()
 		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("sv_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
-		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("sv_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
 		print("[DWR] delayBySoundSpeed: " .. delayBySoundSpeed)
 		print("[DWR] reverbSoundFile: " .. reverbSoundFile)
 		print("[DWR] volume: " .. volume)
