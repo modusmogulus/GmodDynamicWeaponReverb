@@ -119,6 +119,12 @@ local function getOcclusionPercent(earpos, pos)
 	return percentageOfFailedTraces
 end
 
+local function calculateSoundspeedDelay(pos1, pos2)
+	
+	return pos1:Distance(pos2) * 0.01905 / GetConVar("sv_dwr_soundspeed"):GetInt()
+
+end
+
 local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
 	if GetConVar("sv_dwr_disable_reverb"):GetBool() == true then return end
 	local localPlayer = LocalPlayer()
@@ -158,7 +164,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 
 	local delayBySoundSpeed = 0
 	if GetConVar("sv_dwr_disable_soundspeed"):GetBool() == false then
-		delayBySoundSpeed = dataSrc:Distance(earpos) * 0.01905 / GetConVar("sv_dwr_soundspeed"):GetInt()
+		delayBySoundSpeed = calculateSoundspeedDelay(dataSrc, earpos)
 	end
 
 	timer.Simple(delayBySoundSpeed, function()
@@ -202,12 +208,13 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
 end)
 
-hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
+
+function explosionReverb(data)
 	local earpos = LocalPlayer():GetViewEntity():GetPos()
 
 	if not string.find(data.SoundName, "explo") then return end
 	print("[DWR] EntityEmitSound (Explosion)")
-
+	
 	-- looking for reverb soundfiles to uses
 	local positionState = getPositionState(data.Pos)
 	local distanceState = getDistanceState(data.Pos, earpos)
@@ -218,4 +225,11 @@ hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 	local customVolumeMultiplier = 1
 
 	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, customVolumeMultiplier)
+end
+
+
+hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
+
+	explosionReverb(data)
+
 end)
