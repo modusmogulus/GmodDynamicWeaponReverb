@@ -179,7 +179,11 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	if distanceState == "close" then
 		local distanceMultiplier = math.Clamp(3000/distance^2, 0, 1)
 		volume = volume * distanceMultiplier
+	elseif distanceState == "distant" then
+		local distanceMultiplier = math.Clamp(8000/distance^2, 0, 1)
+		volume = volume * distanceMultiplier
 	end
+
 
 	timer.Simple(calculateSoundspeedDelay(dataSrc, earpos), function()
 		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
