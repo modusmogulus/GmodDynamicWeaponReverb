@@ -98,20 +98,22 @@ function boolToInt(value)
 end
 
 local function getOcclusionPercent(earpos, pos)
-	local singletrace = Vector(1, 0, 0) * 100000000
-	local traceAmount = GetConVar("cl_dwr_occlusion_rays"):GetInt()
+	local traceAmount = math.floor(GetConVar("cl_dwr_occlusion_rays"):GetInt()/4)
 	local degrees = 360/traceAmount
 	local savedTraces = {}
 	local successfulTraces = 0
 
-	for i=1, traceAmount, 1 do
-		singletrace:Rotate(Angle(0,degrees))
-		successfulTraces = successfulTraces + boolToInt(traceableToPos(earpos, pos, singletrace))
-	end
-
-	for i=1, traceAmount, 1 do
-		singletrace:Rotate(Angle(degrees,0))
-		successfulTraces = successfulTraces + boolToInt(traceableToPos(earpos, pos, singletrace))
+	for j=1, 4, 1 do
+		local singletrace = Vector(100000000,0,0)
+		local angle
+		if j==1 then angle = Angle(degrees, 0)
+		elseif j==2 then angle = Angle(degrees, degrees)
+		elseif j==3 then angle = Angle(-degrees, degrees)
+		elseif j==4 then angle = Angle(0, degrees) end
+ 		for i=1, traceAmount, 1 do
+			singletrace:Rotate(angle)
+			successfulTraces = successfulTraces + boolToInt(traceableToPos(earpos, pos, singletrace))
+		end
 	end
 
 	successfulTraces = math.Clamp(successfulTraces, 0, traceAmount) -- why the FUCK does it go over the traceamount
@@ -129,10 +131,14 @@ local function getOcclusionPercent(earpos, pos)
 end
 
 local function calculateSoundspeedDelay(pos1, pos2)
-	return pos1:Distance(pos2) * 0.01905 / GetConVar("cl_dwr_soundspeed"):GetInt()
+	if not GetConVar("cl_dwr_disable_soundspeed"):GetBool() then
+		return pos1:Distance(pos2) * 0.01905 / GetConVar("cl_dwr_soundspeed"):GetInt()
+	else
+		return 0
+	end
 end
 
-local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
+local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, isSuppressed)
 	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
 	local localPlayer = LocalPlayer()
 	local earpos = localPlayer:GetViewEntity():GetPos()
@@ -141,7 +147,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	if !isSuppressed then
 		volume = 1
 	else
-		volume = 0.1
+		volume = 0.3
 	end
 
 	local soundLevel = 0 -- sound plays everywhere
@@ -175,23 +181,18 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 		volume = volume * distanceMultiplier
 	end
 
-	local delayBySoundSpeed = 0
-	if not GetConVar("cl_dwr_disable_soundspeed"):GetBool() then
-		delayBySoundSpeed = calculateSoundspeedDelay(dataSrc, earpos)
-	end
-
-	timer.Simple(delayBySoundSpeed, function()
+	timer.Simple(calculateSoundspeedDelay(dataSrc, earpos), function()
 		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
 		if GetConVar("cl_dwr_debug"):GetInt() == 1 then
 			print("[DWR] Distance (Meters): " .. distance)
-			print("[DWR] delayBySoundSpeed: " .. delayBySoundSpeed)
+			print("[DWR] delayBySoundSpeed: " .. calculateSoundspeedDelay(dataSrc, earpos))
 			print("[DWR] reverbSoundFile: " .. reverbSoundFile)
 			print("[DWR] volume: " .. volume)
 			print("[DWR] soundLevel: " .. soundLevel)
 			print("[DWR] soundFlags: " .. soundFlags)
 			print("[DWR] pitch: " .. pitch)
 			print("[DWR] dsp: " .. dsp)
-			print("[DWR] isSuprressed" .. tostring(isSuppressed))
+			print("[DWR] isSuprressed: " .. tostring(isSuppressed))
 			print("--------------------------------------------")
 		end
 	end)
@@ -201,7 +202,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local earpos = LocalPlayer():GetViewEntity():GetPos()
 	local dataSrc = net.ReadVector()
 	local dataAmmoType = net.ReadString()
-	isSuppressed = net.ReadBool()
+	local isSuppressed = net.ReadBool()
 
 	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_EntityFireBullets_networked received") end
 
@@ -216,9 +217,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 
-	local customVolumeMultiplier = 1
-
-	playReverb(reverbSoundFile, positionState, distanceState, dataSrc, customVolumeMultiplier)
+	playReverb(reverbSoundFile, positionState, distanceState, dataSrc, isSuppressed)
 end)
 
 
@@ -234,10 +233,9 @@ function explosionReverb(data)
 	local ammoType = "Explosions"
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
+	local isSuppressed = false
 
-	local customVolumeMultiplier = 1
-
-	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, customVolumeMultiplier)
+	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, isSuppressed)
 end
 
 
