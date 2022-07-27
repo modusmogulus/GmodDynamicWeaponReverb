@@ -53,12 +53,13 @@ end
 
 local function getEntriesStartingWith(pattern, array)
 	local tempArray = {}
-	print(pattern)
-	print(array)
 	for _, path in ipairs(array) do
 		if string.StartWith(path, pattern) then
 			table.insert(tempArray, path)
 		end
+	end
+	if table.IsEmpty(tempArray) then
+		return {"dwr/kleiner.wav"}
 	end
 	return tempArray
 end
