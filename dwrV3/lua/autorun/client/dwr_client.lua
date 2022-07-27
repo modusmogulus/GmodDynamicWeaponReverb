@@ -34,7 +34,7 @@ end
 local function getDistanceState(pos1, pos2)
 	local distance = pos1:Distance(pos2) * 0.01905 -- meters l0l
 	-- tweak this number later plz
-	if distance > 150 then 
+	if distance > 115 then 
 		return "distant"
 	else
 		return "close"
@@ -177,10 +177,10 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	end
 
 	if distanceState == "close" then
-		local distanceMultiplier = math.Clamp(3000/distance^2, 0, 1)
+		local distanceMultiplier = math.Clamp(4000/distance^2, 0, 1)
 		volume = volume * distanceMultiplier
 	elseif distanceState == "distant" then
-		local distanceMultiplier = math.Clamp(8000/distance^2, 0, 1)
+		local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
 		volume = volume * distanceMultiplier
 	end
 
