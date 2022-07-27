@@ -34,7 +34,7 @@ end
 local function getDistanceState(pos1, pos2)
 	local distance = pos1:Distance(pos2) * 0.01905 -- meters l0l
 	-- tweak this number later plz
-	if distance > 100 then 
+	if distance > 150 then 
 		return "distant"
 	else
 		return "close"
