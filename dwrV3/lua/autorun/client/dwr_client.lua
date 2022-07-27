@@ -177,11 +177,13 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
     	if occlusionPercentage == 1 then
 			dsp = 30 -- lowpass
 		end
-		volume = volume * 0.5
+		if distanceState == "distant" then
+			volume = volume * 0.8
+		end
 	end
 
 	if distanceState == "close" then
-		local distanceMultiplier = math.Clamp(4000/distance^2, 0, 1)
+		local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
 		volume = volume * distanceMultiplier
 	elseif distanceState == "distant" then
 		local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
