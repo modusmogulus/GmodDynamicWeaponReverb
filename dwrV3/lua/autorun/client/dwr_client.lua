@@ -42,6 +42,7 @@ local function getDistanceState(pos1, pos2)
 end
 
 local function formatAmmoType(ammoType)
+	ammoType = string.lower(ammoType)
 	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] ammoType to be formatted: " .. ammoType) end
 	if table.HasValue(dwr_supportedAmmoTypes, ammoType) then
 		return ammoType
@@ -52,6 +53,8 @@ end
 
 local function getEntriesStartingWith(pattern, array)
 	local tempArray = {}
+	print(pattern)
+	print(array)
 	for _, path in ipairs(array) do
 		if string.StartWith(path, pattern) then
 			table.insert(tempArray, path)
@@ -184,7 +187,6 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 		volume = volume * distanceMultiplier
 	end
 
-
 	timer.Simple(calculateSoundspeedDelay(dataSrc, earpos), function()
 		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
 		if GetConVar("cl_dwr_debug"):GetInt() == 1 then
@@ -234,7 +236,7 @@ function explosionReverb(data)
 	-- looking for reverb soundfiles to uses
 	local positionState = getPositionState(data.Pos)
 	local distanceState = getDistanceState(data.Pos, earpos)
-	local ammoType = "Explosions"
+	local ammoType = "explosions"
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 	local isSuppressed = false

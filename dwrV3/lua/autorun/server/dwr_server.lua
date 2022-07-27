@@ -71,7 +71,11 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
 
     net.Start("dwr_EntityFireBullets_networked")
         net.WriteVector(data.Src)
-        net.WriteString(data.AmmoType)
+        if #data.AmmoType > 2 then
+            net.WriteString(data.AmmoType)
+        else
+            net.WriteString(weapon.Primary.Ammo)
+        end
         net.WriteBool(isSuprressed)
     net.Broadcast()
 
