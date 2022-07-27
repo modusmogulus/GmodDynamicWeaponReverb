@@ -140,7 +140,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	local soundLevel = 0 -- sound plays everywhere
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
 	local pitch = 100
-	local dsp = 0 -- https://cl_dwr_debug.valvesoftware.com/wiki/Dsp_presets
+	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
 	local distance = earpos:Distance(dataSrc) * 0.01905 -- in meters
 
     local traceToSrc = util.TraceLine( {
