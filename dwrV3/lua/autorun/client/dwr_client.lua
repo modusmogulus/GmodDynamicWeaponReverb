@@ -11,6 +11,7 @@ local function traceableToSky(pos, offset)
     return false
 end
 
+local isSuppressed = false
 
 local function getOutdoorsState(pos)
     local tr_1 = traceableToSky(pos, Vector(0,0,0))
@@ -135,12 +136,18 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
 	local localPlayer = LocalPlayer()
 	local earpos = localPlayer:GetViewEntity():GetPos()
-
 	local volume = 1
+
+	if !isSuppressed then
+		volume = 1
+	else
+		volume = 0.1
+	end
+
 	local soundLevel = 0 -- sound plays everywhere
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
 	local pitch = 100
-	local dsp = 0 -- https://cl_dwr_debug.valvesoftware.com/wiki/Dsp_presets
+	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
 	local distance = earpos:Distance(dataSrc) * 0.01905 -- in meters
 
     local traceToSrc = util.TraceLine( {
@@ -184,6 +191,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 			print("[DWR] soundFlags: " .. soundFlags)
 			print("[DWR] pitch: " .. pitch)
 			print("[DWR] dsp: " .. dsp)
+			print("[DWR] isSuprressed" .. tostring(isSuppressed))
 			print("--------------------------------------------")
 		end
 	end)
@@ -193,6 +201,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local earpos = LocalPlayer():GetViewEntity():GetPos()
 	local dataSrc = net.ReadVector()
 	local dataAmmoType = net.ReadString()
+	isSuppressed = net.ReadBool()
 
 	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_EntityFireBullets_networked received") end
 
