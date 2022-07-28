@@ -70,11 +70,16 @@ local function reflectVector(pVector, normal)
 end
 
 local function traceableToPos(earpos, pos, offset)
-	offset = offset * 1000000000
 	local bounceLimit = GetConVar("cl_dwr_occlusion_rays_reflections"):GetInt()
 	local lastTrace = {}
 	local debugTraceArray = {}
 	local localPlayer = LocalPlayer()
+	local maxdistance = GetConVar("cl_dwr_occlusion_rays_max_distance"):GetInt()
+	local totalDistance = 0
+
+	offset = offset * 1000000000
+	earpos = earpos + Vector(0,0,10) -- just in case
+	pos = pos + Vector(0,0,10) -- just in case
 
     local traceToOffset = util.TraceLine( {
         start = earpos,
@@ -83,6 +88,8 @@ local function traceableToPos(earpos, pos, offset)
         mask = MASK_NPCWORLDSTATIC
     })
 
+    totalDistance = traceToOffset.HitPos:Distance(traceToOffset.StartPos)
+
     if GetConVar("cl_dwr_debug"):GetInt() == 1 then table.insert(debugTraceArray, traceToOffset) end
 
     lastTrace = traceToOffset
@@ -90,11 +97,13 @@ local function traceableToPos(earpos, pos, offset)
 	for i=1,bounceLimit,1 do
 	    local bounceTrace = util.TraceLine( {
 	        start = lastTrace.HitPos,
-	        endpos = lastTrace.HitPos + reflectVector(lastTrace.HitPos, lastTrace.Normal),
+	        endpos = lastTrace.HitPos + reflectVector(lastTrace.HitPos, lastTrace.Normal) * 1000000000,
 	        filter = localPlayer,
 	        mask = MASK_NPCWORLDSTATIC
 	    })
 	    if bounceTrace.StartSolid or bounceTrace.AllSolid then break end
+
+	    totalDistance = totalDistance + bounceTrace.HitPos:Distance(bounceTrace.StartPos)
     	if GetConVar("cl_dwr_debug"):GetInt() == 1 then table.insert(debugTraceArray, bounceTrace) end
 	    lastTrace = bounceTrace
 	end
@@ -105,6 +114,10 @@ local function traceableToPos(earpos, pos, offset)
         filter = localPlayer,
         mask = MASK_NPCWORLDSTATIC
     })
+
+    totalDistance = totalDistance + traceLastTraceToPos.HitPos:Distance(traceLastTraceToPos.StartPos)
+
+    if totalDistance > maxdistance then return false end
 
     if GetConVar("cl_dwr_debug"):GetInt() == 1 then
 		table.insert(debugTraceArray, traceLastTraceToPos)
