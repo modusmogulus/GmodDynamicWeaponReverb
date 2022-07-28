@@ -58,7 +58,7 @@ local function getEntriesStartingWith(pattern, array)
 			table.insert(tempArray, path)
 		end
 	end
-	if true then --table.IsEmpty(tempArray) then
+	if table.IsEmpty(tempArray) then
 		print("[DWR] WTF. Nothing found??? Here's debug info!!!", pattern, table.ToString(dwr_reverbFiles, "debug", false))
 		return {"dwr/kleiner.wav"}
 	end
