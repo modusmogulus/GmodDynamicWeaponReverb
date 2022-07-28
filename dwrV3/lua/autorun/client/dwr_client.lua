@@ -45,7 +45,7 @@ local function formatAmmoType(ammoType)
 	ammoType = string.lower(ammoType)
 	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] ammoType to be formatted: " .. ammoType) end
 	if table.HasValue(dwr_supportedAmmoTypes, ammoType) then
-		return ammoType -- for some reason doesnt work?
+		return ammoType
 	else
 		return "other"
 	end
@@ -58,7 +58,8 @@ local function getEntriesStartingWith(pattern, array)
 			table.insert(tempArray, path)
 		end
 	end
-	if table.IsEmpty(tempArray) then
+	if true then --table.IsEmpty(tempArray) then
+		print("[DWR] WTF. Nothing found??? Here's debug info!!!", pattern, table.ToString(dwr_reverbFiles, "debug", false))
 		return {"dwr/kleiner.wav"}
 	end
 	return tempArray
