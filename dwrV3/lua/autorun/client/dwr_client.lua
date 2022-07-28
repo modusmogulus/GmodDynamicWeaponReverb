@@ -94,6 +94,7 @@ local function traceableToPos(earpos, pos, offset)
 	        filter = localPlayer,
 	        mask = MASK_NPCWORLDSTATIC
 	    })
+	    if bounceTrace.StartSolid or bounceTrace.AllSolid then break end
     	if GetConVar("cl_dwr_debug"):GetInt() == 1 then table.insert(debugTraceArray, bounceTrace) end
 	    lastTrace = bounceTrace
 	end
