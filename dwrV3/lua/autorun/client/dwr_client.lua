@@ -168,11 +168,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	local earpos = localPlayer:GetViewEntity():GetPos()
 	local volume = 1
 
-	if !isSuppressed then
-		volume = 1
-	else
-		volume = 0.3
-	end
+	if isSuppressed then volume = 0.3 end
 
 	local soundLevel = 0 -- sound plays everywhere
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
