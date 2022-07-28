@@ -45,9 +45,9 @@ local function formatAmmoType(ammoType)
 	ammoType = string.lower(ammoType)
 	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] ammoType to be formatted: " .. ammoType) end
 	if table.HasValue(dwr_supportedAmmoTypes, ammoType) then
-		return ammoType
+		return ammoType -- for some reason doesnt work?
 	else
-		return "Other"
+		return "other"
 	end
 end
 
