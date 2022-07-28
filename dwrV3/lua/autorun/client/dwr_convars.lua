@@ -8,5 +8,6 @@ CreateConVar("cl_dwr_disable_outdoors_reverb", "0", {FCVAR_ARCHIVE}, "Disable re
 CreateConVar("cl_dwr_disable_reverb", "0", {FCVAR_ARCHIVE}, "Disable literally all the reverb", 0, 1)
 CreateConVar("cl_dwr_soundspeed", "343", {FCVAR_ARCHIVE}, "Speed of sound", 0, 1000) -- needs to be converted by this * 1.905, default is sound speed in air @20C
 CreateConVar("cl_dwr_occlusion_rays", "32", {FCVAR_ARCHIVE}, "Amount of traces ran from the player to the sound source in order to determine the effects")
+CreateConVar("cl_dwr_occlusion_rays_reflections", "10", {FCVAR_ARCHIVE}, "Maximum amount of times rays can reflect")
 CreateConVar("cl_dwr_debug", "0", {FCVAR_ARCHIVE}, "deez bugs")
 

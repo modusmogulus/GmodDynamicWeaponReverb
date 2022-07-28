@@ -64,36 +64,55 @@ local function getEntriesStartingWith(pattern, array)
 	return tempArray
 end
 
+local function reflectVector(pVector, normal)
+	local dn = 2 * pVector:Dot(normal)
+	return pVector - normal * dn
+end
+
 local function traceableToPos(earpos, pos, offset)
 	offset = offset * 1000000000
-
+	local bounceLimit = GetConVar("cl_dwr_occlusion_rays_reflections"):GetInt()
+	local lastTrace = {}
+	local debugTraceArray = {}
 	local localPlayer = LocalPlayer()
+
     local traceToOffset = util.TraceLine( {
         start = earpos,
         endpos = earpos + offset,
         filter = localPlayer,
         mask = MASK_NPCWORLDSTATIC
     })
-    local traceFromOffsetToPos = util.TraceLine( {
-        start = traceToOffset.HitPos,
+
+    if GetConVar("cl_dwr_debug"):GetInt() == 1 then table.insert(debugTraceArray, traceToOffset) end
+
+    lastTrace = traceToOffset
+
+	for i=1,bounceLimit,1 do
+	    local bounceTrace = util.TraceLine( {
+	        start = lastTrace.HitPos,
+	        endpos = lastTrace.HitPos + reflectVector(lastTrace.HitPos, lastTrace.Normal),
+	        filter = localPlayer,
+	        mask = MASK_NPCWORLDSTATIC
+	    })
+    	if GetConVar("cl_dwr_debug"):GetInt() == 1 then table.insert(debugTraceArray, bounceTrace) end
+	    lastTrace = bounceTrace
+	end
+
+    local traceLastTraceToPos = util.TraceLine( {
+        start = lastTrace.HitPos,
         endpos = pos,
         filter = localPlayer,
         mask = MASK_NPCWORLDSTATIC
     })
 
     if GetConVar("cl_dwr_debug"):GetInt() == 1 then
-	    local color = Color(0,0,0)
-
-	    if traceFromOffsetToPos.HitPos == pos then
-	    	color = Color(0,255,0)
-	    else
-	    	color = Color(255,0,0)
-	    end
-	    debugoverlay.Line(traceToOffset.HitPos, traceToOffset.StartPos, 5, color, true)
-	    debugoverlay.Line(traceFromOffsetToPos.HitPos, traceFromOffsetToPos.StartPos, 5, color, true)
+		table.insert(debugTraceArray, traceLastTraceToPos)
+		local color = Color(255, 255, 255)
+		if traceLastTraceToPos.HitPos == pos then color = Color(0,255,0) else color = Color(255,0,0) end
+		for _, trace in ipairs(debugTraceArray) do debugoverlay.Line(trace.HitPos, trace.StartPos, 5, color, true) end
 	end
 
-    return (traceFromOffsetToPos.HitPos == pos)
+    return (traceLastTraceToPos.HitPos == pos)
 end
 
 function boolToInt(value)
