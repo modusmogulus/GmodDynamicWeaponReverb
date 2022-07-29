@@ -9,7 +9,7 @@ def listFiles(root):
         folder = walk.pop(0)+"/"; items = os.listdir(folder)
         for i in items: i=folder+i; (walk if os.path.isdir(i) else allFiles).append(i)
     for index, file in enumerate(allFiles):
-    	allFiles[index] = file.replace("dwrV3/sound/", "")
+    	allFiles[index] = file.replace("dwrV3/sound/", "").lower()
     return allFiles
 
 

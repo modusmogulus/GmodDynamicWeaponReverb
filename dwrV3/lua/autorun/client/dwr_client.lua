@@ -53,7 +53,9 @@ end
 
 local function getEntriesStartingWith(pattern, array)
 	local tempArray = {}
+	pattern = string.lower(pattern)
 	for _, path in ipairs(array) do
+		path = string.lower(path)
 		if string.StartWith(path, pattern) then
 			table.insert(tempArray, path)
 		end
