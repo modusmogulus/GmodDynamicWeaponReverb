@@ -6,10 +6,6 @@ if ConVarExists("arccw_enable_penetration") then
     GetConVar("arccw_enable_ricochet"):SetInt(0)
 end
 
-function string.startswith(String, Start)
-    return string.sub(String,1,string.len(Start))==Start
-end
-
 util.AddNetworkString("dwr_EntityFireBullets_networked")
 
 hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
@@ -36,7 +32,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
 
         if data.Distance < 100 then print("[DWR] Skipping bullet because it's a melee attack") return end
 
-        if string.startswith(weaponClass, "arccw_") then
+        if string.StartWith(weaponClass, "arccw_") then
             if data.Distance == 20000 then
                 print("[DWR] Skipping bullet because it's... not a bullet!")
                 return
@@ -48,9 +44,9 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
             return
         end
 
-        if string.startswith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then isSuprressed = true
-        elseif string.startswith(weaponClass, "tfa_") and weapon:GetSilenced() then isSuprressed = false
-        elseif string.startswith(weaponClass, "mg_") or weaponClass == mg_valpha then
+        if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then isSuprressed = true
+        elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then isSuprressed = false
+        elseif string.StartWith(weaponClass, "mg_") or weaponClass == mg_valpha then
             for name, attachments in pairs(weapon.Customization) do
                 if name != "Muzzle" then continue end
                 local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
@@ -58,7 +54,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
                     isSuprressed = true
                 end
             end
-        elseif string.startswith(weaponClass, "cw_") then
+        elseif string.StartWith(weaponClass, "cw_") then
             for k, v in pairs(weapon.ActiveAttachments) do
                 if v == false then continue end
                 local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
