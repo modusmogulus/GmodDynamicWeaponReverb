@@ -205,13 +205,11 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
     local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
 
     if not direct then
-	    local occlusionPercentage = getOcclusionPercent(earpos, dataSrc)
+	    local occlusionPercentage = math.Clamp(getOcclusionPercent(earpos, dataSrc), 0.4, 1) 
     	if occlusionPercentage == 1 then
 			dsp = 30 -- lowpass
 		end
-		if distanceState == "distant" then
-			volume = volume * 0.8
-		end
+		volume = volume * occlusionPercentage
 	end
 
 	if distanceState == "close" then
