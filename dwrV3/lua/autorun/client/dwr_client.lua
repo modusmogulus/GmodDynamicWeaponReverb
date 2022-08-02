@@ -264,6 +264,8 @@ function explosionReverb(data)
 	local earpos = LocalPlayer():GetViewEntity():GetPos()
 
 	if not string.find(data.SoundName, "explo") then return end
+	if not string.StartWith(data.SoundName, "^") then return end
+
 	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound") end
 	
 	-- looking for reverb soundfiles to uses
