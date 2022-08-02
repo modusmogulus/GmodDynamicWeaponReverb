@@ -11,4 +11,5 @@ CreateConVar("cl_dwr_occlusion_rays", "32", {FCVAR_ARCHIVE}, "Amount of traces r
 CreateConVar("cl_dwr_occlusion_rays_reflections", "2", {FCVAR_ARCHIVE}, "Maximum amount of times rays can reflect (0 - disable reflections)")
 CreateConVar("cl_dwr_occlusion_rays_max_distance", "100000", {FCVAR_ARCHIVE}, "Rays will be rejected if they're longer than this distance (in hammer units a.k.a inches)")
 CreateConVar("cl_dwr_debug", "0", {FCVAR_ARCHIVE}, "deez bugs")
+CreateConVar("cl_dwr_calculate_every_sound", "0", {FCVAR_ARCHIVE}, "Will do modifications to every sound emitted by entities. (sound occlusion, volume falloff)")
 

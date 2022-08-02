@@ -76,18 +76,16 @@ local function traceableToPos(earpos, pos, offset)
 	local bounceLimit = GetConVar("cl_dwr_occlusion_rays_reflections"):GetInt()
 	local lastTrace = {}
 	local debugTraceArray = {}
-	local localPlayer = LocalPlayer()
 	local maxdistance = GetConVar("cl_dwr_occlusion_rays_max_distance"):GetInt()
 	local totalDistance = 0
 
-	offset = offset * 1000000000
+
 	earpos = earpos + Vector(0,0,10) -- just in case
 	pos = pos + Vector(0,0,10) -- just in case
 
     local traceToOffset = util.TraceLine( {
         start = earpos,
         endpos = earpos + offset,
-        filter = localPlayer,
         mask = MASK_NPCWORLDSTATIC
     })
 
@@ -101,7 +99,6 @@ local function traceableToPos(earpos, pos, offset)
 	    local bounceTrace = util.TraceLine( {
 	        start = lastTrace.HitPos,
 	        endpos = lastTrace.HitPos + reflectVector(lastTrace.HitPos, lastTrace.Normal) * 1000000000,
-	        filter = localPlayer,
 	        mask = MASK_NPCWORLDSTATIC
 	    })
 	    if bounceTrace.StartSolid or bounceTrace.AllSolid then break end
@@ -114,7 +111,6 @@ local function traceableToPos(earpos, pos, offset)
     local traceLastTraceToPos = util.TraceLine( {
         start = lastTrace.HitPos,
         endpos = pos,
-        filter = localPlayer,
         mask = MASK_NPCWORLDSTATIC
     })
 
@@ -137,11 +133,17 @@ function boolToInt(value)
   	return value and 1 or 0
 end
 
+function inverted_boolToInt(value)
+	-- oh come on lua, fuck you.
+  	return value and 0 or 1
+end
+
 local function getOcclusionPercent(earpos, pos)
 	local traceAmount = math.floor(GetConVar("cl_dwr_occlusion_rays"):GetInt()/4)
 	local degrees = 360/traceAmount
-	local savedTraces = {}
+
 	local successfulTraces = 0
+	local failedTraces = 0
 
 	for j=1, 4, 1 do
 		local singletrace = Vector(100000000,0,0)
@@ -152,14 +154,13 @@ local function getOcclusionPercent(earpos, pos)
 		elseif j==4 then angle = Angle(0, degrees) end
  		for i=1, traceAmount, 1 do
 			singletrace:Rotate(angle)
-			successfulTraces = successfulTraces + boolToInt(traceableToPos(earpos, pos, singletrace))
+			local traceToPos = traceableToPos(earpos, pos, singletrace)
+			successfulTraces = successfulTraces + boolToInt(traceToPos)
+			failedTraces = failedTraces + inverted_boolToInt(traceToPos)
 		end
 	end
 
-	successfulTraces = math.Clamp(successfulTraces, 0, traceAmount) -- why the FUCK does it go over the traceamount
-
-	local failedTraces = traceAmount - successfulTraces
-	local percentageOfFailedTraces = failedTraces / traceAmount
+	local percentageOfFailedTraces = failedTraces / (traceAmount * 4)
 
 	if GetConVar("cl_dwr_debug"):GetInt() == 1 then
 	    print("[DWR] successfulTraces: ", successfulTraces)
@@ -195,7 +196,6 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
     local traceToSrc = util.TraceLine( {
         start = earpos,
         endpos = dataSrc,
-        filter = localPlayer,
         mask = MASK_NPCWORLDSTATIC
     })
 
@@ -205,11 +205,9 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
     local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
 
     if not direct then
-	    local occlusionPercentage = math.Clamp(getOcclusionPercent(earpos, dataSrc), 0.4, 1) 
-    	if occlusionPercentage == 1 then
-			dsp = 30 -- lowpass
-		end
-		volume = volume * occlusionPercentage
+	    local occlusionPercentage = getOcclusionPercent(earpos, dataSrc)
+    	if occlusionPercentage == 1 then dsp = 30 end -- lowpass
+		volume = volume * (1-math.Clamp(occlusionPercentage-0.5, 0, 0.5))
 	end
 
 	if distanceState == "close" then
@@ -221,7 +219,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	end
 
 	timer.Simple(calculateSoundspeedDelay(dataSrc, earpos), function()
-		EmitSound(reverbSoundFile, LocalPlayer():EyePos(), -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
+		EmitSound(reverbSoundFile, localPlayer:EyePos(), -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
 		if GetConVar("cl_dwr_debug"):GetInt() == 1 then
 			print("[DWR] Distance (Meters): " .. distance)
 			print("[DWR] delayBySoundSpeed: " .. calculateSoundspeedDelay(dataSrc, earpos))
@@ -279,7 +277,58 @@ function explosionReverb(data)
 	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, isSuppressed)
 end
 
+local function modifySound(reverbSoundFile, positionState, distanceState, data)
+	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
+	local localPlayer = LocalPlayer()
+	local earpos = localPlayer:GetViewEntity():GetPos()
+	local volume = 1
+	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
+	local distance = earpos:Distance(data.Pos) * 0.01905 -- in meters
+
+    local traceToSrc = util.TraceLine( {
+        start = earpos,
+        endpos = data.Pos,
+        mask = MASK_NPCWORLDSTATIC
+    })
+
+    -- i hate floats
+    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
+    local x2,y2,z2 = math.floor(data.Pos:Unpack())
+    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
+
+    if not direct then
+	    local occlusionPercentage = getOcclusionPercent(earpos, data.Pos)
+    	if occlusionPercentage == 1 then dsp = 30 end -- lowpass
+		volume = volume * (1-math.Clamp(occlusionPercentage-0.5, 0, 0.5))
+	end
+
+	if distanceState == "close" then
+		local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
+		volume = volume * distanceMultiplier
+	elseif distanceState == "distant" then
+		local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
+		volume = volume * distanceMultiplier
+	end
+
+	data.Volume = data.Volume * volume
+	data.DSP = dsp
+
+	return data
+end
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 	explosionReverb(data)
+
+	if GetConVar("cl_dwr_calculate_every_sound"):GetInt() == 1 then
+		if string.find(data.SoundName, "dwr") or data.Pos == nil then return end
+
+		if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound EVERYTHING :DD") end
+
+		local earpos = LocalPlayer():GetViewEntity():GetPos()
+		local positionState = getPositionState(data.Pos)
+		local distanceState = getDistanceState(data.Pos, earpos)
+		data = modifySound(data.SoundName, positionState, distanceState, data)
+		
+		return true
+	end
 end)
