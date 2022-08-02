@@ -13,6 +13,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     local weapon = NULL
     local weaponIsWeird = false
     local isSuprressed = false
+    local ammotype = "none"
 
     if attacker:IsPlayer() or attacker:IsNPC() then
         entity = attacker
@@ -29,6 +30,8 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     if not weaponIsWeird then -- should solve all of the issues caused by external bullet sources (such as the turret mod)
         local weaponClass = weapon:GetClass()
         local entityShootPos = entity:GetShootPos()
+        
+        if #data.AmmoType > 2 then ammotype = data.AmmoType else ammotype = weapon.Primary.Ammo end
 
         if data.Distance < 100 then print("[DWR] Skipping bullet because it's a melee attack") return end
 
@@ -67,11 +70,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
 
     net.Start("dwr_EntityFireBullets_networked")
         net.WriteVector(data.Src)
-        if #data.AmmoType > 2 then
-            net.WriteString(data.AmmoType)
-        else
-            net.WriteString(weapon.Primary.Ammo)
-        end
+        net.WriteString(ammotype)
         net.WriteBool(isSuprressed)
     net.Broadcast()
 
