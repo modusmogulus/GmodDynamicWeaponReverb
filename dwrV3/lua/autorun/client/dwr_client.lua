@@ -188,7 +188,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 
 	local soundLevel = 0 -- sound plays everywhere
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
-	local pitch = math.random(85, 110)
+	local pitch = math.random(94, 107)
 	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
 	local distance = earpos:Distance(dataSrc) * 0.01905 -- in meters
 
