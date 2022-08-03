@@ -30,7 +30,12 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     if not weaponIsWeird then -- should solve all of the issues caused by external bullet sources (such as the turret mod)
         local weaponClass = weapon:GetClass()
         local entityShootPos = entity:GetShootPos()
-        
+
+        if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
+        if entity.dwr_shotThisTick then return end
+        entity.dwr_shotThisTick = true
+        timer.Simple(0, function() entity.dwr_shotThisTick = false end)
+    
         if #data.AmmoType > 2 then ammotype = data.AmmoType else ammotype = weapon.Primary.Ammo end
 
         if data.Distance < 100 then print("[DWR] Skipping bullet because it's a melee attack") return end
