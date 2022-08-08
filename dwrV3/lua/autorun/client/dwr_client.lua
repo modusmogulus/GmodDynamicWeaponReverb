@@ -13,6 +13,15 @@ end
 
 local isSuppressed = false
 
+local function getEarPos()
+	local lp = LocalPlayer()
+	local viewEntityPos = lp:GetViewEntity():GetPos()
+
+	if viewEntityPos != lp:GetPos() then return viewEntityPos end
+
+	return lp:EyePos()
+end
+
 local function getOutdoorsState(pos)
     local tr_1 = traceableToSky(pos, Vector(0,0,0))
     local tr_2 = traceableToSky(pos, Vector(120,0,0))
@@ -141,7 +150,6 @@ end
 local function getOcclusionPercent(earpos, pos)
 	local traceAmount = math.floor(GetConVar("cl_dwr_occlusion_rays"):GetInt()/4)
 	local degrees = 360/traceAmount
-
 	local successfulTraces = 0
 	local failedTraces = 0
 
@@ -179,10 +187,8 @@ local function calculateSoundspeedDelay(pos1, pos2)
 	end
 end
 
-local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, isSuppressed)
+local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, isSuppressed, earpos)
 	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
-	local localPlayer = LocalPlayer()
-	local earpos = localPlayer:GetViewEntity():GetPos()
 	local volume = 1
 
 	if isSuppressed then volume = 0.3 end
@@ -219,7 +225,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	end
 
 	timer.Simple(calculateSoundspeedDelay(dataSrc, earpos), function()
-		EmitSound(reverbSoundFile, localPlayer:EyePos(), -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
+		EmitSound(reverbSoundFile, earpos, -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
 		if GetConVar("cl_dwr_debug"):GetInt() == 1 then
 			print("[DWR] Distance (Meters): " .. distance)
 			print("[DWR] delayBySoundSpeed: " .. calculateSoundspeedDelay(dataSrc, earpos))
@@ -236,7 +242,7 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 end
 
 net.Receive("dwr_EntityFireBullets_networked", function(len)
-	local earpos = LocalPlayer():GetViewEntity():GetPos()
+	local earpos = getEarPos()
 	local dataSrc = net.ReadVector()
 	local dataAmmoType = net.ReadString()
 	local isSuppressed = net.ReadBool()
@@ -254,12 +260,12 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 
-	playReverb(reverbSoundFile, positionState, distanceState, dataSrc, isSuppressed)
+	playReverb(reverbSoundFile, positionState, distanceState, dataSrc, isSuppressed, earpos)
 end)
 
 
 function explosionReverb(data)
-	local earpos = LocalPlayer():GetViewEntity():GetPos()
+	local earpos = getEarPos()
 
 	if not string.find(data.SoundName, "explo") then return end
 	if not string.StartWith(data.SoundName, "^") then return end
@@ -274,13 +280,11 @@ function explosionReverb(data)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 	local isSuppressed = false
 
-	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, isSuppressed)
+	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, isSuppressed, earpos)
 end
 
-local function modifySound(reverbSoundFile, positionState, distanceState, data)
+local function modifySound(reverbSoundFile, positionState, distanceState, data, earpos)
 	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
-	local localPlayer = LocalPlayer()
-	local earpos = localPlayer:GetViewEntity():GetPos()
 	local volume = 1
 	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
 	local distance = earpos:Distance(data.Pos) * 0.01905 -- in meters
@@ -324,10 +328,10 @@ hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 
 		if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound EVERYTHING :DD") end
 
-		local earpos = LocalPlayer():GetViewEntity():GetPos()
+		local earpos = getEarPos()
 		local positionState = getPositionState(data.Pos)
 		local distanceState = getDistanceState(data.Pos, earpos)
-		data = modifySound(data.SoundName, positionState, distanceState, data)
+		data = modifySound(data.SoundName, positionState, distanceState, data, earpos)
 		
 		return true
 	end
