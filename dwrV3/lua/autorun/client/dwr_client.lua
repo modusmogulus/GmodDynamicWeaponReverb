@@ -4,7 +4,8 @@ local function traceableToSky(pos, offset)
     local tr = util.TraceLine({start=pos + offset, endpos=pos + Vector(offset.x, offset.y, 100000000), mask=MASK_NPCWORLDSTATIC})
 	local temp = util.TraceLine({start=tr.StartPos, endpos=pos, mask=MASK_NPCWORLDSTATIC}) -- doing this because sometimes the trace can go oob and even rarely there are cases where i cant see if it spawned oob
 
-    if temp.HitPos == pos and tr.HitSky then
+
+    if temp.HitPos == pos and not temp.StartSolid and tr.HitSky then
     	return true
     end
 
