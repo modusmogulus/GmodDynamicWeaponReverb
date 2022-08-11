@@ -239,6 +239,25 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 		end
 	end)
 end
+
+function explosionReverb(data)
+	local earpos = getEarPos()
+
+	if not string.find(data.SoundName, "explo") then return end
+	if not string.StartWith(data.SoundName, "^") then return end
+
+	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound") end
+	
+	-- looking for reverb soundfiles to uses
+	local positionState = getPositionState(data.Pos)
+	local distanceState = getDistanceState(data.Pos, earpos)
+	local ammoType = "explosions"
+	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
+	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
+	local isSuppressed = false
+
+	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, isSuppressed, earpos)
+end
 -- end of functions
 
 -- start of main
