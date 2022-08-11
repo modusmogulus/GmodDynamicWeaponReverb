@@ -54,6 +54,8 @@ local function formatAmmoType(ammoType)
 	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] ammoType to be formatted: " .. ammoType) end
 	if table.HasValue(dwr_supportedAmmoTypes, ammoType) then
 		return ammoType
+	elseif ammoType == "explosions" then
+		return "explosions"
 	else
 		return "other"
 	end
@@ -186,9 +188,18 @@ local function calculateSoundspeedDelay(pos1, pos2)
 	end
 end
 
-local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc, isSuppressed, earpos)
+local function playReverb(dataSrc, ammotype, isSuppressed)
 	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
+		
+	local earpos = getEarPos()
 	local volume = 1
+	local positionState = getPositionState(dataSrc)
+	if GetConVar("cl_dwr_disable_indoors_reverb"):GetBool() == true && positionState == "indoors" then return end
+	if GetConVar("cl_dwr_disable_outdoors_reverb"):GetBool() == true && positionState == "outdoors" then return end
+	local distanceState = getDistanceState(dataSrc, earpos)
+	local ammoType = formatAmmoType(ammotype)
+	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
+	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 
 	if isSuppressed then volume = 0.3 end
 
@@ -240,96 +251,128 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 	end)
 end
 
-function explosionReverb(data)
-	local earpos = getEarPos()
+local function getSuppressed(weapon, weaponClass)
+    if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
+    elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then return true
+    elseif string.StartWith(weaponClass, "mg_") or weaponClass == mg_valpha then
+        if weapon.Customization != nil then
+            for name, attachments in pairs(weapon.Customization) do
+                if name != "Muzzle" then continue end
+                local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
+                if string.find(attachment.Key, "silence") then
+                    return true
+                end
+            end
+        end
+    elseif string.StartWith(weaponClass, "cw_") then
+        if weapon.ActiveAttachments != nil then
+            for k, v in pairs(weapon.ActiveAttachments) do
+                if v == false then continue end
+                local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
+                if att.isSuppressor then
+                    return true
+                end
+            end
+        end
+    end
 
-	if not string.find(data.SoundName, "explo") then return end
-	if not string.StartWith(data.SoundName, "^") then return end
-
-	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound") end
-	
-	-- looking for reverb soundfiles to uses
-	local positionState = getPositionState(data.Pos)
-	local distanceState = getDistanceState(data.Pos, earpos)
-	local ammoType = "explosions"
-	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
-	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
-	local isSuppressed = false
-
-	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, isSuppressed, earpos)
+    return false
 end
 -- end of functions
 
 -- start of main
-net.Receive("dwr_EntityFireBullets_networked", function(len)
-	local earpos = getEarPos()
-	local dataSrc = net.ReadVector()
-	local dataAmmoType = net.ReadString()
-	local isSuppressed = net.ReadBool()
+if game.SinglePlayer() then
+	net.Receive("dwr_EntityFireBullets_networked", function(len)
+		local dataSrc = net.ReadVector()
+		local dataAmmoType = net.ReadString()
+		local isSuppressed = net.ReadBool()
 
-	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_EntityFireBullets_networked received") end
+		if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_EntityFireBullets_networked received") end
 
-	-- looking for reverb soundfiles to use
-	local positionState = getPositionState(dataSrc)
+		playReverb(dataSrc, dataAmmoType, isSuppressed)
+	end)
+end
 
-	if GetConVar("cl_dwr_disable_indoors_reverb"):GetBool() == true && positionState == "indoors" then return end
-	if GetConVar("cl_dwr_disable_outdoors_reverb"):GetBool() == true && positionState == "outdoors" then return end
+if not game.SinglePlayer() then
+	hook.Add("EntityFireBullets", "dwr_firebullets_client", function(attacker, data)
+		local earpos = getEarPos()
+	    local entity = NULL
+	    local weapon = NULL
+	    local weaponIsWeird = false
+	    local isSuprressed = false
+	    local ammotype = "none"
 
-	local distanceState = getDistanceState(dataSrc, earpos)
-	local ammoType = formatAmmoType(dataAmmoType)
-	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
-	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
+	    if attacker:IsPlayer() or attacker:IsNPC() then
+	        entity = attacker
+	        weapon = entity:GetActiveWeapon()
+	    else
+	        weapon = attacker
+	        entity = weapon:GetOwner()
+	        if entity == NULL then 
+	            entity = attacker
+	            weaponIsWeird = true
+	        end
+	    end
 
-	playReverb(reverbSoundFile, positionState, distanceState, dataSrc, isSuppressed, earpos)
+	    if not weaponIsWeird then -- should solve all of the issues caused by external bullet sources (such as the turret mod)
+	        local weaponClass = weapon:GetClass()
+	        local entityShootPos = entity:GetShootPos()
+
+	        if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
+	        if entity.dwr_shotThisTick then return end
+	        entity.dwr_shotThisTick = true
+	        timer.Simple(0, function() entity.dwr_shotThisTick = false end) -- the most universal fix for fuckin penetration and ricochet
+	    
+	        if #data.AmmoType > 2 then ammotype = data.AmmoType else ammotype = weapon.Primary.Ammo end
+
+	        if data.Distance < 100 then print("[DWR] Skipping bullet because it's a melee attack") return end
+
+	        if string.StartWith(weaponClass, "arccw_") then
+	            if data.Distance == 20000 then
+	                print("[DWR] Skipping bullet because it's... not a bullet!")
+	                return
+	            end
+	            if data.Spread == Vector(0, 0, 0) then
+	                print("[DWR] Arccw PhysBullets surface impact detected, skipping")
+	                return
+	            end
+	        end
+
+	        isSuppressed = getSuppressed(weapon, weaponClass)
+	    end
+
+		if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_firebullets_client hook called") end
+
+		playReverb(data.Src, ammotype, isSuppressed)
+	end)
+end
+
+hook.Add("Think", "dwr_detectarccwphys", function()
+    if ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)] == nil then return end
+    local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
+    --if table.IsEmpty(latestPhysBullet) then return end
+    if latestPhysBullet["Pos"] != latestPhysBullet["PosStart"] then return end
+    if latestPhysBullet["Attacker"] == Entity(0) then return end
+
+    local weapon = latestPhysBullet["Weapon"]
+    local weaponClass = weapon:GetClass()
+
+    local isSuppressed = getSuppressed(weapon, weaponClass)
+    local pos = latestPhysBullet["Pos"]
+    local ammotype = weapon.Primary.Ammo
+
+    PrintTable(latestPhysBullet)
+
+    playReverb(pos, ammotype, isSuppressed)
 end)
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
-	explosionReverb(data)
+	if not string.find(data.SoundName, "explo") then return end
+	if not string.StartWith(data.SoundName, "^") then return end
 
-	-- MAKE THIS NOT SHIT!!! JP4 PASTER
-	--if GetConVar("cl_dwr_calculate_every_sound"):GetInt() == 1 then
-	--	if string.find(data.SoundName, "dwr") or data.Pos == nil then return end
-	--	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound for everything") end
-	--	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
---
-	--	local earpos = getEarPos()
-	--	local positionState = getPositionState(data.Pos)
-	--	local distanceState = getDistanceState(data.Pos, earpos)
---
-	--	local volume = 1
-	--	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
-	--	local distance = earpos:Distance(data.Pos) * 0.01905 -- in meters
---
-	--    local traceToSrc = util.TraceLine( {
-	--        start = earpos,
-	--        endpos = data.Pos,
-	--        mask = MASK_NPCWORLDSTATIC
-	--    })
---
-	--    -- i hate floats
-	--    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
-	--    local x2,y2,z2 = math.floor(data.Pos:Unpack())
-	--    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
---
-	--    if not direct then
-	--	    local occlusionPercentage = getOcclusionPercent(earpos, data.Pos)
-	--    	if occlusionPercentage == 1 then dsp = 30 end -- lowpass
-	--		volume = volume * (1-math.Clamp(occlusionPercentage-0.5, 0, 0.5))
-	--	end
---
-	--	if distanceState == "close" then
-	--		local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
-	--		volume = volume * distanceMultiplier
-	--	elseif distanceState == "distant" then
-	--		local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
-	--		volume = volume * distanceMultiplier
-	--	end
---
-	--	data.Volume = data.Volume * volume
-	--	data.DSP = dsp
-	--	
-	--	return true
-	--end
+	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound") end
+
+	playReverb(data.Pos, "Explosions", false)
 end)
 
 -- end of main

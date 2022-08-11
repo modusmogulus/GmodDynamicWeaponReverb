@@ -1,8 +1,9 @@
 print("[DWRV3] Server loaded.")
 
-util.AddNetworkString("dwr_EntityFireBullets_networked")
 
-local latestPhysBullet = {}
+if not game.SinglePlayer() then return end
+
+util.AddNetworkString("dwr_EntityFireBullets_networked")
 
 local function getSuppressed(weapon, weaponClass)
     if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
@@ -31,28 +32,6 @@ local function getSuppressed(weapon, weaponClass)
 
     return false
 end
-
-hook.Add("Think", "dwr_detectarccwphys", function()
-    local latest = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
-    if latest != nil then latestPhysBullet = latest else latestPhysBullet = {} end
-    if table.IsEmpty(latestPhysBullet) then return end
-    if latestPhysBullet["Pos"] and latestPhysBullet["OldPos"] != nil then return end
-    if latestPhysBullet["Attacker"] == Entity(0) then return end
-
-    local weapon = latestPhysBullet["Weapon"]
-    local weaponClass = weapon:GetClass()
-
-    local isSuppressed = getSuppressed(weapon, weaponClass)
-    local pos = latestPhysBullet["Pos"]
-    local ammotype = weapon.Primary.Ammo
-
-    net.Start("dwr_EntityFireBullets_networked")
-        net.WriteVector(pos)
-        net.WriteString(ammotype)
-        net.WriteBool(isSuppressed)
-    net.SendPVS(pos)
-end)
-
 
 hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     local entity = NULL
@@ -91,10 +70,16 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
                 print("[DWR] Skipping bullet because it's... not a bullet!")
                 return
             end
+            if data.Spread == Vector(0, 0, 0) then
+                print("[DWR] Arccw PhysBullets surface impact detected, skipping")
+                return
+            end
         end
 
         isSuppressed = getSuppressed(weapon, weaponClass)
     end
+
+    --if data.Damage == 0 then return end -- lol what's the point
 
     net.Start("dwr_EntityFireBullets_networked")
         net.WriteVector(data.Src)
