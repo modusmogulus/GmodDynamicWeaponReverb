@@ -281,20 +281,22 @@ end
 -- end of functions
 
 -- start of main
-if game.SinglePlayer() then
-	net.Receive("dwr_EntityFireBullets_networked", function(len)
-		local dataSrc = net.ReadVector()
-		local dataAmmoType = net.ReadString()
-		local isSuppressed = net.ReadBool()
+net.Receive("dwr_EntityFireBullets_networked", function(len)
+	-- we receive this only when someone else shoots inorder to eliminate any possibility of accessing serverside-only functions from the client.
+	local dataSrc = net.ReadVector()
+	local dataAmmoType = net.ReadString()
+	local isSuppressed = net.ReadBool()
+	local ignore = (net.ReadEntity() == LocalPlayer())
+	if not game.SinglePlayer() and ignore then return end
 
-		if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_EntityFireBullets_networked received") end
+	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_EntityFireBullets_networked received") end
 
-		playReverb(dataSrc, dataAmmoType, isSuppressed)
-	end)
-end
+	playReverb(dataSrc, dataAmmoType, isSuppressed)
+end)
 
 if not game.SinglePlayer() then
 	hook.Add("EntityFireBullets", "dwr_firebullets_client", function(attacker, data)
+		if attacker != LocalPlayer() then return end
 		local earpos = getEarPos()
 	    local entity = NULL
 	    local weapon = NULL
@@ -361,7 +363,20 @@ hook.Add("Think", "dwr_detectarccwphys", function()
     local pos = latestPhysBullet["Pos"]
     local ammotype = weapon.Primary.Ammo
 
-    PrintTable(latestPhysBullet)
+    playReverb(pos, ammotype, isSuppressed)
+end)
+
+hook.Add("Think", "dwr_detecttfaphys", function()
+	local latestPhysBullet = TFA.Ballistics.Bullets["bullet_registry"][table.Count(TFA.Ballistics.Bullets["bullet_registry"])]
+	if latestPhysBullet == nil then return end
+	if latestPhysBullet["bul"]["Src"] != latestPhysBullet["pos"] then return end
+
+    local weapon = latestPhysBullet["inflictor"]
+    local weaponClass = weapon:GetClass()
+
+    local isSuppressed = getSuppressed(weapon, weaponClass)
+    local pos = latestPhysBullet["bul"]["Src"]
+    local ammotype = weapon.Primary.Ammo
 
     playReverb(pos, ammotype, isSuppressed)
 end)

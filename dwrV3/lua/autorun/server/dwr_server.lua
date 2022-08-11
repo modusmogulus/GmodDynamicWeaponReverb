@@ -1,8 +1,5 @@
 print("[DWRV3] Server loaded.")
 
-
-if not game.SinglePlayer() then return end
-
 util.AddNetworkString("dwr_EntityFireBullets_networked")
 
 local function getSuppressed(weapon, weaponClass)
@@ -85,7 +82,8 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         net.WriteVector(data.Src)
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
-    net.SendPVS(data.Src)
+        net.WriteEntity(attacker) -- to exclude them in MP. they're going to get hook data anyway
+    net.SendPAS(data.Src)
 
     print("[DWR] dwr_EntityFireBullets_networked sent")
 end)
