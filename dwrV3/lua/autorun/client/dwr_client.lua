@@ -1,9 +1,9 @@
 print("[DWRV3] Client loaded.")
 
+-- start of functions
 local function traceableToSky(pos, offset)
     local tr = util.TraceLine({start=pos + offset, endpos=pos + Vector(offset.x, offset.y, 100000000), mask=MASK_NPCWORLDSTATIC})
 	local temp = util.TraceLine({start=tr.StartPos, endpos=pos, mask=MASK_NPCWORLDSTATIC}) -- doing this because sometimes the trace can go oob and even rarely there are cases where i cant see if it spawned oob
-
 
     if temp.HitPos == pos and not temp.StartSolid and tr.HitSky then
     	return true
@@ -11,8 +11,6 @@ local function traceableToSky(pos, offset)
 
     return false
 end
-
-local isSuppressed = false
 
 local function getEarPos()
 	local lp = LocalPlayer()
@@ -241,7 +239,9 @@ local function playReverb(reverbSoundFile, positionState, distanceState, dataSrc
 		end
 	end)
 end
+-- end of functions
 
+-- start of main
 net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local earpos = getEarPos()
 	local dataSrc = net.ReadVector()
@@ -264,76 +264,53 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	playReverb(reverbSoundFile, positionState, distanceState, dataSrc, isSuppressed, earpos)
 end)
 
-
-function explosionReverb(data)
-	local earpos = getEarPos()
-
-	if not string.find(data.SoundName, "explo") then return end
-	if not string.StartWith(data.SoundName, "^") then return end
-
-	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound") end
-	
-	-- looking for reverb soundfiles to uses
-	local positionState = getPositionState(data.Pos)
-	local distanceState = getDistanceState(data.Pos, earpos)
-	local ammoType = "explosions"
-	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammoType .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
-	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
-	local isSuppressed = false
-
-	playReverb(reverbSoundFile, positionState, distanceState, data.Pos, isSuppressed, earpos)
-end
-
-local function modifySound(reverbSoundFile, positionState, distanceState, data, earpos)
-	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
-	local volume = 1
-	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
-	local distance = earpos:Distance(data.Pos) * 0.01905 -- in meters
-
-    local traceToSrc = util.TraceLine( {
-        start = earpos,
-        endpos = data.Pos,
-        mask = MASK_NPCWORLDSTATIC
-    })
-
-    -- i hate floats
-    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
-    local x2,y2,z2 = math.floor(data.Pos:Unpack())
-    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
-
-    if not direct then
-	    local occlusionPercentage = getOcclusionPercent(earpos, data.Pos)
-    	if occlusionPercentage == 1 then dsp = 30 end -- lowpass
-		volume = volume * (1-math.Clamp(occlusionPercentage-0.5, 0, 0.5))
-	end
-
-	if distanceState == "close" then
-		local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
-		volume = volume * distanceMultiplier
-	elseif distanceState == "distant" then
-		local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
-		volume = volume * distanceMultiplier
-	end
-
-	data.Volume = data.Volume * volume
-	data.DSP = dsp
-
-	return data
-end
-
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 	explosionReverb(data)
 
-	if GetConVar("cl_dwr_calculate_every_sound"):GetInt() == 1 then
-		if string.find(data.SoundName, "dwr") or data.Pos == nil then return end
-
-		if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound EVERYTHING :DD") end
-
-		local earpos = getEarPos()
-		local positionState = getPositionState(data.Pos)
-		local distanceState = getDistanceState(data.Pos, earpos)
-		data = modifySound(data.SoundName, positionState, distanceState, data, earpos)
-		
-		return true
-	end
+	-- MAKE THIS NOT SHIT!!! JP4 PASTER
+	--if GetConVar("cl_dwr_calculate_every_sound"):GetInt() == 1 then
+	--	if string.find(data.SoundName, "dwr") or data.Pos == nil then return end
+	--	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound for everything") end
+	--	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
+--
+	--	local earpos = getEarPos()
+	--	local positionState = getPositionState(data.Pos)
+	--	local distanceState = getDistanceState(data.Pos, earpos)
+--
+	--	local volume = 1
+	--	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
+	--	local distance = earpos:Distance(data.Pos) * 0.01905 -- in meters
+--
+	--    local traceToSrc = util.TraceLine( {
+	--        start = earpos,
+	--        endpos = data.Pos,
+	--        mask = MASK_NPCWORLDSTATIC
+	--    })
+--
+	--    -- i hate floats
+	--    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
+	--    local x2,y2,z2 = math.floor(data.Pos:Unpack())
+	--    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
+--
+	--    if not direct then
+	--	    local occlusionPercentage = getOcclusionPercent(earpos, data.Pos)
+	--    	if occlusionPercentage == 1 then dsp = 30 end -- lowpass
+	--		volume = volume * (1-math.Clamp(occlusionPercentage-0.5, 0, 0.5))
+	--	end
+--
+	--	if distanceState == "close" then
+	--		local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
+	--		volume = volume * distanceMultiplier
+	--	elseif distanceState == "distant" then
+	--		local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
+	--		volume = volume * distanceMultiplier
+	--	end
+--
+	--	data.Volume = data.Volume * volume
+	--	data.DSP = dsp
+	--	
+	--	return true
+	--end
 end)
+
+-- end of main

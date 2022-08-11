@@ -1,12 +1,58 @@
 print("[DWRV3] Server loaded.")
 
--- arccw is 2hard for me to care, so no offset fixage for u
-if ConVarExists("arccw_enable_penetration") then
-    GetConVar("arccw_enable_penetration"):SetInt(0)
-    GetConVar("arccw_enable_ricochet"):SetInt(0)
+util.AddNetworkString("dwr_EntityFireBullets_networked")
+
+local latestPhysBullet = {}
+
+local function getSuppressed(weapon, weaponClass)
+    if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
+    elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then return true
+    elseif string.StartWith(weaponClass, "mg_") or weaponClass == mg_valpha then
+        if weapon.Customization != nil then
+            for name, attachments in pairs(weapon.Customization) do
+                if name != "Muzzle" then continue end
+                local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
+                if string.find(attachment.Key, "silence") then
+                    return true
+                end
+            end
+        end
+    elseif string.StartWith(weaponClass, "cw_") then
+        if weapon.ActiveAttachments != nil then
+            for k, v in pairs(weapon.ActiveAttachments) do
+                if v == false then continue end
+                local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
+                if att.isSuppressor then
+                    return true
+                end
+            end
+        end
+    end
+
+    return false
 end
 
-util.AddNetworkString("dwr_EntityFireBullets_networked")
+hook.Add("Think", "dwr_detectarccwphys", function()
+    local latest = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
+    if latest != nil then latestPhysBullet = latest else latestPhysBullet = {} end
+    if table.IsEmpty(latestPhysBullet) then return end
+    if latestPhysBullet["Pos"] and latestPhysBullet["OldPos"] != nil then return end
+    if latestPhysBullet["Attacker"] == Entity(0) then return end
+
+    local weapon = latestPhysBullet["Weapon"]
+    local weaponClass = weapon:GetClass()
+
+    local isSuppressed = getSuppressed(weapon, weaponClass)
+    local pos = latestPhysBullet["Pos"]
+    local ammotype = weapon.Primary.Ammo
+
+    net.Start("dwr_EntityFireBullets_networked")
+        net.WriteVector(pos)
+        net.WriteString(ammotype)
+        net.WriteBool(isSuppressed)
+    net.SendPVS(pos)
+end)
+
 
 hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     local entity = NULL
@@ -34,7 +80,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
         if entity.dwr_shotThisTick then return end
         entity.dwr_shotThisTick = true
-        timer.Simple(0, function() entity.dwr_shotThisTick = false end)
+        timer.Simple(0, function() entity.dwr_shotThisTick = false end) -- the most universal fix for fuckin penetration and ricochet
     
         if #data.AmmoType > 2 then ammotype = data.AmmoType else ammotype = weapon.Primary.Ammo end
 
@@ -47,37 +93,13 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
             end
         end
 
-        if Vector(math.floor(entityShootPos.x), math.floor(entityShootPos.y), 0) != Vector(math.floor(data.Src.x),math.floor(data.Src.y), 0) then
-            print("[DWR] Bullet is apart of a penetration chain. Skipping.")
-            return
-        end
-
-        if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then isSuprressed = true
-        elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then isSuprressed = false
-        elseif string.StartWith(weaponClass, "mg_") or weaponClass == mg_valpha then
-            for name, attachments in pairs(weapon.Customization) do
-                if name != "Muzzle" then continue end
-                local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
-                if string.find(attachment.Key, "silence") then
-                    isSuprressed = true
-                end
-            end
-        elseif string.StartWith(weaponClass, "cw_") then
-            for k, v in pairs(weapon.ActiveAttachments) do
-                if v == false then continue end
-                local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
-                if att.isSuppressor then
-                    isSuprressed = true
-                end
-            end
-        end
+        isSuppressed = getSuppressed(weapon, weaponClass)
     end
 
     net.Start("dwr_EntityFireBullets_networked")
         net.WriteVector(data.Src)
         net.WriteString(ammotype)
-        net.WriteBool(isSuprressed)
-    --net.Broadcast()
+        net.WriteBool(isSuppressed)
     net.SendPVS(data.Src)
 
     print("[DWR] dwr_EntityFireBullets_networked sent")
