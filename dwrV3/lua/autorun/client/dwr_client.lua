@@ -355,6 +355,7 @@ hook.Add("Think", "dwr_detectarccwphys", function()
     --if table.IsEmpty(latestPhysBullet) then return end
     if latestPhysBullet["Pos"] != latestPhysBullet["PosStart"] then return end
     if latestPhysBullet["Attacker"] == Entity(0) then return end
+    if latestPhysBullet["WeaponClass"] == nil then return end
 
     local weapon = latestPhysBullet["Weapon"]
     local weaponClass = weapon:GetClass()

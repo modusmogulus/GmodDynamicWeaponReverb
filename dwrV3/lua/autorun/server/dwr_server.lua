@@ -76,8 +76,6 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         isSuppressed = getSuppressed(weapon, weaponClass)
     end
 
-    --if data.Damage == 0 then return end -- lol what's the point
-
     net.Start("dwr_EntityFireBullets_networked")
         net.WriteVector(data.Src)
         net.WriteString(ammotype)
