@@ -30,6 +30,58 @@ local function getSuppressed(weapon, weaponClass)
     return false
 end
 
+hook.Add("Think", "dwr_detectarccwphys", function()
+    if ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)] == nil then return end
+    local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
+    if latestPhysBullet["dwr_detected"] then return end
+    --if table.IsEmpty(latestPhysBullet) then return end
+    if latestPhysBullet["Pos"] and latestPhysBullet["OldPos"] != nil then return end
+    if latestPhysBullet["Attacker"] == Entity(0) then return end
+    if latestPhysBullet["WeaponClass"] == nil then return end
+
+    local weapon = latestPhysBullet["Weapon"]
+    local weaponClass = weapon:GetClass()
+
+    local isSuppressed = getSuppressed(weapon, weaponClass)
+    local pos = latestPhysBullet["Pos"]
+    local ammotype = weapon.Primary.Ammo
+
+    PrintTable(latestPhysBullet)
+
+    net.Start("dwr_EntityFireBullets_networked")
+        net.WriteVector(pos)
+        net.WriteString(ammotype)
+        net.WriteBool(isSuppressed)
+        net.WriteEntity(latestPhysBullet["Attacker"]) -- to exclude them in MP. they're going to get hook data anyway
+    net.SendPAS(pos)
+    latestPhysBullet["dwr_detected"] = true
+end)
+
+hook.Add("Think", "dwr_detecttfaphys", function()
+    local latestPhysBullet = TFA.Ballistics.Bullets["bullet_registry"][table.Count(TFA.Ballistics.Bullets["bullet_registry"])]
+    if latestPhysBullet == nil then return end
+    --if latestPhysBullet["bul"]["Src"] != latestPhysBullet["pos"] then return end
+    if latestPhysBullet["dwr_detected"] then return end
+
+    local weapon = latestPhysBullet["inflictor"]
+    local weaponClass = weapon:GetClass()
+
+    local isSuppressed = getSuppressed(weapon, weaponClass)
+    local pos = latestPhysBullet["bul"]["Src"]
+    local ammotype = weapon.Primary.Ammo
+
+    PrintTable(latestPhysBullet)
+
+    net.Start("dwr_EntityFireBullets_networked")
+        net.WriteVector(pos)
+        net.WriteString(ammotype)
+        net.WriteBool(isSuppressed)
+        net.WriteEntity(latestPhysBullet["inflictor"]:GetOwner()) -- to exclude them in MP. they're going to get hook data anyway
+    net.SendPAS(pos)
+
+    latestPhysBullet["dwr_detected"] = true
+end)
+
 hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     local entity = NULL
     local weapon = NULL

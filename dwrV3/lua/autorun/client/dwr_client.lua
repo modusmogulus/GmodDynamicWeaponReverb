@@ -251,6 +251,46 @@ local function playReverb(dataSrc, ammotype, isSuppressed)
 	end)
 end
 
+local function processSound(data)
+	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
+
+	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
+	local distance = earpos:Distance(dataSrc) * 0.01905 -- in meters
+	local volume = data.Volume
+	local dataSrc = data.Pos
+	local earpos = getEarPos()
+
+    local traceToSrc = util.TraceLine( {
+        start = earpos,
+        endpos = dataSrc,
+        mask = MASK_NPCWORLDSTATIC
+    })
+
+    -- i hate floats
+    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
+    local x2,y2,z2 = math.floor(dataSrc:Unpack())
+    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
+
+    if not direct then
+	    local occlusionPercentage = getOcclusionPercent(earpos, dataSrc)
+    	if occlusionPercentage == 1 then dsp = 30 end -- lowpass
+		volume = volume * (1-math.Clamp(occlusionPercentage-0.5, 0, 0.5))
+	end
+
+	if distanceState == "close" then
+		local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
+		volume = volume * distanceMultiplier
+	elseif distanceState == "distant" then
+		local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
+		volume = volume * distanceMultiplier
+	end
+
+	data.Volume = volume
+	data.DSP = dsp
+
+	return data
+end
+
 local function getSuppressed(weapon, weaponClass)
     if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
     elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then return true
@@ -347,48 +387,65 @@ if not game.SinglePlayer() then
 
 		playReverb(data.Src, ammotype, isSuppressed)
 	end)
+
+	hook.Add("Think", "dwr_detectarccwphys", function()
+	    if ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)] == nil then return end
+	    local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
+	    if latestPhysBullet["dwr_detected"] then return end
+	    --if table.IsEmpty(latestPhysBullet) then return end
+	    if latestPhysBullet["Pos"] != latestPhysBullet["PosStart"] then return end
+	    if latestPhysBullet["Attacker"] == Entity(0) then return end
+	    if LocalPlayer() != latestPhysBullet["Attacker"] then return end
+	    if latestPhysBullet["WeaponClass"] == nil then return end
+
+
+	    local weapon = latestPhysBullet["Weapon"]
+	    local weaponClass = weapon:GetClass()
+
+	    local isSuppressed = getSuppressed(weapon, weaponClass)
+	    local pos = latestPhysBullet["Pos"]
+	    local ammotype = weapon.Primary.Ammo
+
+	    print("clientside physbullet detected")
+
+	    playReverb(pos, ammotype, isSuppressed)
+	    latestPhysBullet["dwr_detected"] = true
+	end)
+
+	hook.Add("Think", "dwr_detecttfaphys", function()
+	    local latestPhysBullet = TFA.Ballistics.Bullets["bullet_registry"][table.Count(TFA.Ballistics.Bullets["bullet_registry"])]
+	    if latestPhysBullet == nil then return end
+	    --if latestPhysBullet["bul"]["Src"] != latestPhysBullet["pos"] then return end
+	    if latestPhysBullet["dwr_detected"] then return end
+	    if latestPhysBullet["owner"] != LocalPlayer() then return end
+
+	    local weapon = latestPhysBullet["inflictor"]
+	    local weaponClass = weapon:GetClass()
+
+	    local isSuppressed = getSuppressed(weapon, weaponClass)
+	    local pos = latestPhysBullet["bul"]["Src"]
+	    local ammotype = weapon.Primary.Ammo
+
+	    print("clientside physbullet detected")
+
+	    playReverb(pos, ammotype, isSuppressed)
+	    latestPhysBullet["dwr_detected"] = true
+	end)
 end
 
-hook.Add("Think", "dwr_detectarccwphys", function()
-    if ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)] == nil then return end
-    local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
-    --if table.IsEmpty(latestPhysBullet) then return end
-    if latestPhysBullet["Pos"] != latestPhysBullet["PosStart"] then return end
-    if latestPhysBullet["Attacker"] == Entity(0) then return end
-    if latestPhysBullet["WeaponClass"] == nil then return end
-
-    local weapon = latestPhysBullet["Weapon"]
-    local weaponClass = weapon:GetClass()
-
-    local isSuppressed = getSuppressed(weapon, weaponClass)
-    local pos = latestPhysBullet["Pos"]
-    local ammotype = weapon.Primary.Ammo
-
-    playReverb(pos, ammotype, isSuppressed)
-end)
-
-hook.Add("Think", "dwr_detecttfaphys", function()
-	local latestPhysBullet = TFA.Ballistics.Bullets["bullet_registry"][table.Count(TFA.Ballistics.Bullets["bullet_registry"])]
-	if latestPhysBullet == nil then return end
-	if latestPhysBullet["bul"]["Src"] != latestPhysBullet["pos"] then return end
-
-    local weapon = latestPhysBullet["inflictor"]
-    local weaponClass = weapon:GetClass()
-
-    local isSuppressed = getSuppressed(weapon, weaponClass)
-    local pos = latestPhysBullet["bul"]["Src"]
-    local ammotype = weapon.Primary.Ammo
-
-    playReverb(pos, ammotype, isSuppressed)
-end)
+local function explosionProcess(data)
+	if not string.find(data.SoundName, "explo") or not string.StartWith(data.SoundName, "^") then return end
+	playReverb(data.Pos, "explosions", false)
+end
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
-	if not string.find(data.SoundName, "explo") then return end
-	if not string.StartWith(data.SoundName, "^") then return end
-
 	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound") end
+	explosionProcess(data)
 
-	playReverb(data.Pos, "Explosions", false)
+	if GetConVar("cl_dwr_process_everything"):GetInt() == 1 then
+		data = processSound(data)
+		return true
+	end
 end)
 
 -- end of main
