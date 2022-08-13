@@ -12,4 +12,5 @@ CreateConVar("cl_dwr_occlusion_rays_reflections", "0", {FCVAR_ARCHIVE}, "Maximum
 CreateConVar("cl_dwr_occlusion_rays_max_distance", "100000", {FCVAR_ARCHIVE}, "Rays will be rejected if they're longer than this distance (in hammer units a.k.a inches)")
 CreateConVar("cl_dwr_debug", "0", {FCVAR_ARCHIVE}, "deez bugs")
 CreateConVar("cl_dwr_process_everything", "0", {FCVAR_ARCHIVE}, "Will do modifications to every sound emitted by entities. (sound occlusion, volume falloff)")
+CreateConVar("cl_dwr_disable_bulletcracks", "0", {FCVAR_ARCHIVE}, "Bullet crackhead DISALBE")
 

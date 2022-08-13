@@ -45,11 +45,15 @@ hook.Add("Think", "dwr_detectarccwphys", function()
     local isSuppressed = getSuppressed(weapon, weaponClass)
     local pos = latestPhysBullet["Pos"]
     local ammotype = weapon.Primary.Ammo
+    local dir = latestPhysBullet["Vel"]:Angle():Forward()
+    local vel = latestPhysBullet["Vel"]
 
     PrintTable(latestPhysBullet)
 
     net.Start("dwr_EntityFireBullets_networked")
         net.WriteVector(pos)
+        net.WriteVector(dir)
+        net.WriteVector(vel)
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(latestPhysBullet["Attacker"]) -- to exclude them in MP. they're going to get hook data anyway
@@ -69,11 +73,15 @@ hook.Add("Think", "dwr_detecttfaphys", function()
     local isSuppressed = getSuppressed(weapon, weaponClass)
     local pos = latestPhysBullet["bul"]["Src"]
     local ammotype = weapon.Primary.Ammo
+    local dir = latestPhysBullet["velocity"]:Angle():Forward()
+    local vel = latestPhysBullet["velocity"]
 
     PrintTable(latestPhysBullet)
 
     net.Start("dwr_EntityFireBullets_networked")
         net.WriteVector(pos)
+        net.WriteVector(dir)
+        net.WriteVector(vel)
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(latestPhysBullet["inflictor"]:GetOwner()) -- to exclude them in MP. they're going to get hook data anyway
@@ -130,6 +138,8 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
 
     net.Start("dwr_EntityFireBullets_networked")
         net.WriteVector(data.Src)
+        net.WriteVector(data.Dir)
+        net.WriteVector(Vector(0,0,0))
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(attacker) -- to exclude them in MP. they're going to get hook data anyway
