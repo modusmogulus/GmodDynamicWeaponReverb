@@ -393,10 +393,9 @@ if not game.SinglePlayer() then
 	    local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
 	    if latestPhysBullet["dwr_detected"] then return end
 	    --if table.IsEmpty(latestPhysBullet) then return end
-	    if latestPhysBullet["Pos"] != latestPhysBullet["PosStart"] then return end
 	    if latestPhysBullet["Attacker"] == Entity(0) then return end
 	    if LocalPlayer() != latestPhysBullet["Attacker"] then return end
-	    if latestPhysBullet["WeaponClass"] == nil then return end
+	    --if latestPhysBullet["WeaponClass"] == nil then return end
 
 
 	    local weapon = latestPhysBullet["Weapon"]
@@ -406,7 +405,6 @@ if not game.SinglePlayer() then
 	    local pos = latestPhysBullet["Pos"]
 	    local ammotype = weapon.Primary.Ammo
 
-	    print("clientside physbullet detected")
 
 	    playReverb(pos, ammotype, isSuppressed)
 	    latestPhysBullet["dwr_detected"] = true

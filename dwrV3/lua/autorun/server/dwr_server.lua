@@ -35,9 +35,9 @@ hook.Add("Think", "dwr_detectarccwphys", function()
     local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
     if latestPhysBullet["dwr_detected"] then return end
     --if table.IsEmpty(latestPhysBullet) then return end
-    if latestPhysBullet["Pos"] and latestPhysBullet["OldPos"] != nil then return end
+    --if latestPhysBullet["Pos"] and latestPhysBullet["OldPos"] != nil then return end
     if latestPhysBullet["Attacker"] == Entity(0) then return end
-    if latestPhysBullet["WeaponClass"] == nil then return end
+    --if latestPhysBullet["WeaponClass"] == nil then return end
 
     local weapon = latestPhysBullet["Weapon"]
     local weaponClass = weapon:GetClass()
