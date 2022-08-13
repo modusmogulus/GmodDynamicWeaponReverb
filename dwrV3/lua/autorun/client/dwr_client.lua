@@ -85,10 +85,8 @@ end
 local function traceableToPos(earpos, pos, offset)
 	local bounceLimit = GetConVar("cl_dwr_occlusion_rays_reflections"):GetInt()
 	local lastTrace = {}
-	local debugTraceArray = {}
 	local maxdistance = GetConVar("cl_dwr_occlusion_rays_max_distance"):GetInt()
 	local totalDistance = 0
-
 
 	earpos = earpos + Vector(0,0,10) -- just in case
 	pos = pos + Vector(0,0,10) -- just in case
@@ -101,8 +99,6 @@ local function traceableToPos(earpos, pos, offset)
 
     totalDistance = traceToOffset.HitPos:Distance(traceToOffset.StartPos)
 
-    if GetConVar("cl_dwr_debug"):GetInt() == 1 then table.insert(debugTraceArray, traceToOffset) end
-
     lastTrace = traceToOffset
 
 	for i=1,bounceLimit,1 do
@@ -114,7 +110,6 @@ local function traceableToPos(earpos, pos, offset)
 	    if bounceTrace.StartSolid or bounceTrace.AllSolid then break end
 
 	    totalDistance = totalDistance + bounceTrace.HitPos:Distance(bounceTrace.StartPos)
-    	if GetConVar("cl_dwr_debug"):GetInt() == 1 then table.insert(debugTraceArray, bounceTrace) end
 	    lastTrace = bounceTrace
 	end
 
@@ -127,13 +122,6 @@ local function traceableToPos(earpos, pos, offset)
     totalDistance = totalDistance + traceLastTraceToPos.HitPos:Distance(traceLastTraceToPos.StartPos)
 
     if totalDistance > maxdistance then return false end
-
-    if GetConVar("cl_dwr_debug"):GetInt() == 1 then
-		table.insert(debugTraceArray, traceLastTraceToPos)
-		local color = Color(255, 255, 255)
-		if traceLastTraceToPos.HitPos == pos then color = Color(0,255,0) else color = Color(255,0,0) end
-		for _, trace in ipairs(debugTraceArray) do debugoverlay.Line(trace.HitPos, trace.StartPos, 5, color, true) end
-	end
 
     return (traceLastTraceToPos.HitPos == pos)
 end
@@ -392,10 +380,8 @@ if not game.SinglePlayer() then
 	    if ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)] == nil then return end
 	    local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
 	    if latestPhysBullet["dwr_detected"] then return end
-	    --if table.IsEmpty(latestPhysBullet) then return end
 	    if latestPhysBullet["Attacker"] == Entity(0) then return end
 	    if LocalPlayer() != latestPhysBullet["Attacker"] then return end
-	    --if latestPhysBullet["WeaponClass"] == nil then return end
 
 
 	    local weapon = latestPhysBullet["Weapon"]
@@ -405,6 +391,7 @@ if not game.SinglePlayer() then
 	    local pos = latestPhysBullet["Pos"]
 	    local ammotype = weapon.Primary.Ammo
 
+	    print("clientside physbullet detected")
 
 	    playReverb(pos, ammotype, isSuppressed)
 	    latestPhysBullet["dwr_detected"] = true
@@ -413,7 +400,6 @@ if not game.SinglePlayer() then
 	hook.Add("Think", "dwr_detecttfaphys", function()
 	    local latestPhysBullet = TFA.Ballistics.Bullets["bullet_registry"][table.Count(TFA.Ballistics.Bullets["bullet_registry"])]
 	    if latestPhysBullet == nil then return end
-	    --if latestPhysBullet["bul"]["Src"] != latestPhysBullet["pos"] then return end
 	    if latestPhysBullet["dwr_detected"] then return end
 	    if latestPhysBullet["owner"] != LocalPlayer() then return end
 
@@ -432,7 +418,7 @@ if not game.SinglePlayer() then
 end
 
 local function explosionProcess(data)
-	if not string.find(data.SoundName, "explo") or not string.StartWith(data.SoundName, "^") then return end
+	if not string.find(data.SoundName, "explo") or not string.StartWith(data.SoundName, "^") or not string.find(data.SoundName, "dwr") then return end
 	playReverb(data.Pos, "explosions", false)
 end
 
