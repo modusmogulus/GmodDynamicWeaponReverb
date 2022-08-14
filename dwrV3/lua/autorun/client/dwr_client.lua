@@ -172,7 +172,7 @@ end
 
 local function calculateDelay(pos1, pos2, speed)
 	if speed == 0 then return 0 end
-	return pos1:Distance(pos2) * UNITS_TO_METERS / speed
+	return pos1:Distance(pos2) * UNITS_TO_METERS / speed * UNITS_TO_METERS
 end
 
 local function playReverb(src, ammotype, isSuppressed)
@@ -252,7 +252,7 @@ local function playBulletCrack(src, dir, vel, ammotype)
     local dsp = 0
 	local soundLevel = 0 -- sound plays everywhere
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
-	local pitch = math.random(90, 110)
+	local pitch = math.random(80, 120)
 
     local trajectory = util.TraceLine( {
         start = src,
@@ -261,23 +261,27 @@ local function playBulletCrack(src, dir, vel, ammotype)
     })
 
     debugoverlay.Line(trajectory.StartPos, trajectory.HitPos, 5, Color( 255, 255, 255 ), true)
-    distance, point, distanceToPoint = util.DistanceToLine(trajectory.StartPos, trajectory.HitPos, earpos)
-    if distance * UNITS_TO_METERS > 30 then return end -- I've read somewhere that you can hear bullet cracks even from 100 meters away. But for the scale sake I'll keep it lower.
+    distance, point, distanceToPointOnLine = util.DistanceToLine(trajectory.StartPos, trajectory.HitPos, earpos)
+    if distance * UNITS_TO_METERS > 10 then return end -- I've read somewhere that you can hear bullet cracks even from 100 meters away. But for the scale sake I'll keep it lower.
+
+    local fromEarToPoint = util.TraceLine( {
+        start = earpos,
+        endpos = point,
+        mask = MASK_NPCWORLDSTATIC
+    })
+
+    if fromEarToPoint.HitPos != point then return end
 
 	local crackOptions = getEntriesStartingWith("dwr/" .. "bulletcracks/" .. distanceState .. "/", dwr_reverbFiles)
 	local crackhead = crackOptions[math.random(#crackOptions)]
 
-	if distanceState == "close" then
-		local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
-		volume = volume * distanceMultiplier
-	elseif distanceState == "distant" then
-		local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
-		volume = volume * distanceMultiplier
+	if distanceState == "distant" then
 		dsp = 30
 	end
 
-	timer.Simple(calculateDelay(trajectory.StartPos, trajectory.HitPos, vel:Length() * UNITS_TO_METERS), function()
-		EmitSound(crackhead, earpos, -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
+	timer.Simple(calculateDelay(trajectory.StartPos, trajectory.HitPos, vel:Length()), function()
+		EmitSound(crackhead, point, -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
+		if distanceState == "distant" then EmitSound(crackhead, point, -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp) end
 	end)
 end
 

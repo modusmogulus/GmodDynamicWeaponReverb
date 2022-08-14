@@ -35,7 +35,7 @@ hook.Add("Think", "dwr_detectarccwphys", function()
     local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
     if latestPhysBullet["dwr_detected"] then return end
     --if table.IsEmpty(latestPhysBullet) then return end
-    --if latestPhysBullet["Pos"] and latestPhysBullet["OldPos"] != nil then return end
+    if latestPhysBullet["OldPos"] != nil then return end
     if latestPhysBullet["Attacker"] == Entity(0) then return end
     --if latestPhysBullet["WeaponClass"] == nil then return end
 
@@ -109,7 +109,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         end
     end
 
-    if not weaponIsWeird then -- should solve all of the issues caused by external bullet sources (such as the turret mod)
+    if not weaponIsWeird and weapon != NULL then -- should solve all of the issues caused by external bullet sources (such as the turret mod)
         local weaponClass = weapon:GetClass()
         local entityShootPos = entity:GetShootPos()
 
