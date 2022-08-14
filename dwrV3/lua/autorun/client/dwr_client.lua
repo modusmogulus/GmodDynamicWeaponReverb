@@ -242,8 +242,10 @@ local function playReverb(src, ammotype, isSuppressed)
 	end)
 end
 
-local function playBulletCrack(src, dir, vel)
+local function playBulletCrack(src, dir, vel, ammotype)
 	if GetConVar("cl_dwr_disable_bulletcracks"):GetInt() == 1 then return end
+	ammotype = formatAmmoType(ammotype)
+	if ammotype == "pistol" then return end
 	local earpos = getEarPos()
     local distanceState = getDistanceState(src, earpos)
     local volume = 1
@@ -260,7 +262,7 @@ local function playBulletCrack(src, dir, vel)
 
     debugoverlay.Line(trajectory.StartPos, trajectory.HitPos, 5, Color( 255, 255, 255 ), true)
     distance, point, distanceToPoint = util.DistanceToLine(trajectory.StartPos, trajectory.HitPos, earpos)
-    if distance * UNITS_TO_METERS > 20 then return end
+    if distance * UNITS_TO_METERS > 30 then return end -- I've read somewhere that you can hear bullet cracks even from 100 meters away. But for the scale sake I'll keep it lower.
 
 	local crackOptions = getEntriesStartingWith("dwr/" .. "bulletcracks/" .. distanceState .. "/", dwr_reverbFiles)
 	local crackhead = crackOptions[math.random(#crackOptions)]
@@ -362,7 +364,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_EntityFireBullets_networked received") end
 
 	if not ignore then
-		playBulletCrack(src, dir, vel)
+		playBulletCrack(src, dir, vel, ammotype)
 	end
 	playReverb(src, ammotype, isSuppressed)
 end)
