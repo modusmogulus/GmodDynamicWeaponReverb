@@ -31,6 +31,7 @@ local function getSuppressed(weapon, weaponClass)
 end
 
 hook.Add("Think", "dwr_detectarccwphys", function()
+    if ArcCW == nil then return end
     if ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)] == nil then return end
     local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
     if latestPhysBullet["dwr_detected"] then return end
@@ -62,6 +63,7 @@ hook.Add("Think", "dwr_detectarccwphys", function()
 end)
 
 hook.Add("Think", "dwr_detecttfaphys", function()
+    if TFA == nil then return end
     local latestPhysBullet = TFA.Ballistics.Bullets["bullet_registry"][table.Count(TFA.Ballistics.Bullets["bullet_registry"])]
     if latestPhysBullet == nil then return end
     --if latestPhysBullet["bul"]["Src"] != latestPhysBullet["pos"] then return end
