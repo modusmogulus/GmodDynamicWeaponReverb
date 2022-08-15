@@ -226,7 +226,7 @@ local function playReverb(src, ammotype, isSuppressed)
 	if GetConVar("cl_dwr_disable_soundspeed"):GetInt() == 1 then soundspeed = 0 end
 
 	timer.Simple(calculateDelay(src, earpos, soundspeed), function()
-		EmitSound(reverbSoundFile, earpos, -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetFloat() / 100), soundLevel, soundFlags, pitch, dsp)
+		EmitSound(reverbSoundFile, earpos, -2, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetFloat() / 100), soundLevel, soundFlags, pitch, dsp)
 		if GetConVar("cl_dwr_debug"):GetInt() == 1 then
 			print("[DWR] Distance (Meters): " .. distance)
 			print("[DWR] delayBySoundSpeed: " .. calculateDelay(src, earpos, soundspeed))
@@ -275,13 +275,13 @@ local function playBulletCrack(src, dir, vel, ammotype)
 	local crackOptions = getEntriesStartingWith("dwr/" .. "bulletcracks/" .. distanceState .. "/", dwr_reverbFiles)
 	local crackhead = crackOptions[math.random(#crackOptions)]
 
-	if distanceState == "distant" then
-		dsp = 30
-	end
+	--if distanceState == "distant" then
+	--	dsp = 30
+	--end
 
 	timer.Simple(calculateDelay(trajectory.StartPos, trajectory.HitPos, vel:Length()), function()
-		EmitSound(crackhead, point, -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
-		if distanceState == "distant" then EmitSound(crackhead, point, -2, CHAN_STATIC, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp) end
+		EmitSound(crackhead, point, -2, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
+		--if distanceState == "distant" then EmitSound(crackhead, point, -2, CHAN_USER_BASE, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp) end
 	end)
 end
 
