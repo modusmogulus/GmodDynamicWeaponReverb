@@ -420,7 +420,7 @@ if not game.SinglePlayer() then
 	                print("[DWR] Skipping bullet because it's... not a bullet!")
 	                return
 	            end
-	            if data.Spread == Vector(0, 0, 0) then
+	            if GetConVar("arccw_bullet_enable"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then
 	                print("[DWR] Arccw PhysBullets surface impact detected, skipping")
 	                return
 	            end
@@ -458,6 +458,7 @@ if not game.SinglePlayer() then
 
 	hook.Add("Think", "dwr_detecttfaphys", function()
     	if TFA == nil then return end
+
 	    local latestPhysBullet = TFA.Ballistics.Bullets["bullet_registry"][table.Count(TFA.Ballistics.Bullets["bullet_registry"])]
 	    if latestPhysBullet == nil then return end
 	    if latestPhysBullet["dwr_detected"] then return end

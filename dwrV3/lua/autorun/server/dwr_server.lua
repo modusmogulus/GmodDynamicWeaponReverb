@@ -129,7 +129,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
                 print("[DWR] Skipping bullet because it's... not a bullet!")
                 return
             end
-            if data.Spread == Vector(0, 0, 0) then
+            if GetConVar("arccw_bullet_enable"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then
                 print("[DWR] Arccw PhysBullets surface impact detected, skipping")
                 return
             end
