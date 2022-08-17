@@ -264,13 +264,20 @@ local function playBulletCrack(src, dir, vel, ammotype)
     distance, point, distanceToPointOnLine = util.DistanceToLine(trajectory.StartPos, trajectory.HitPos, earpos)
     if distance * UNITS_TO_METERS > 10 then return end -- I've read somewhere that you can hear bullet cracks even from 100 meters away. But for the scale sake I'll keep it lower.
 
-    local fromEarToPoint = util.TraceLine( {
+    local traceToSrc = util.TraceLine( {
         start = earpos,
         endpos = point,
         mask = MASK_NPCWORLDSTATIC
     })
 
-    if fromEarToPoint.HitPos != point then return end
+    -- i hate floats
+    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
+    local x2,y2,z2 = math.floor(point:Unpack())
+    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
+
+    if not direct then
+    	dsp = 30
+	end
 
 	local crackOptions = getEntriesStartingWith("dwr/" .. "bulletcracks/" .. distanceState .. "/", dwr_reverbFiles)
 	local crackhead = crackOptions[math.random(#crackOptions)]

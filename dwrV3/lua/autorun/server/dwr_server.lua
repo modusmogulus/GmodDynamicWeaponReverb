@@ -144,8 +144,8 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         net.WriteVector(Vector(0,0,0))
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
-        net.WriteEntity(attacker) -- to exclude them in MP. they're going to get hook data anyway
+        net.WriteEntity(entity) -- to exclude them in MP. they're going to get hook data anyway
     net.SendPAS(data.Src)
-
+    
     print("[DWR] dwr_EntityFireBullets_networked sent")
 end)
