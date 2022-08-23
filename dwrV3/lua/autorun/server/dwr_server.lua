@@ -55,6 +55,7 @@ hook.Add("Think", "dwr_detectarccwphys", function()
         net.WriteVector(pos)
         net.WriteVector(dir)
         net.WriteVector(vel)
+        net.WriteVector(Vector(0,0,0)) -- todo: get spread. too lazy to do it rn
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(latestPhysBullet["Attacker"]) -- to exclude them in MP. they're going to get hook data anyway
@@ -84,6 +85,7 @@ hook.Add("Think", "dwr_detecttfaphys", function()
         net.WriteVector(pos)
         net.WriteVector(dir)
         net.WriteVector(vel)
+        net.WriteVector(Vector(0,0,0)) -- todo: get spread. too lazy to do it rn
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(latestPhysBullet["inflictor"]:GetOwner()) -- to exclude them in MP. they're going to get hook data anyway
@@ -142,6 +144,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         net.WriteVector(data.Src)
         net.WriteVector(data.Dir)
         net.WriteVector(Vector(0,0,0))
+        net.WriteVector(data.Spread*1000) -- this is retarded. fuck u gmod
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(entity) -- to exclude them in MP. they're going to get hook data anyway

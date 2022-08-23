@@ -242,7 +242,19 @@ local function playReverb(src, ammotype, isSuppressed)
 	end)
 end
 
-local function playBulletCrack(src, dir, vel, ammotype)
+-- shamelessly pasted from arccw because math is hard
+function calculateSpread(dir, spread)
+    local radius = math.Rand(0, 1)
+    local theta = math.Rand(0, math.rad(360))
+    local bulletang = dir:Angle()
+    local forward, right, up = bulletang:Forward(), bulletang:Right(), bulletang:Up()
+    local x = radius * math.sin(theta)
+    local y = radius * math.cos(theta)
+
+    return (dir + right * spread.x * x + up * spread.y * y)
+end
+
+local function playBulletCrack(src, dir, vel, spread, ammotype)
 	if GetConVar("cl_dwr_disable_bulletcracks"):GetInt() == 1 then return end
 	ammotype = formatAmmoType(ammotype)
 	local earpos = getEarPos()
@@ -253,9 +265,11 @@ local function playBulletCrack(src, dir, vel, ammotype)
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
 	local pitch = math.random(94, 107)
 
+	spread = spread / 1000
+
     local trajectory = util.TraceLine( {
         start = src,
-        endpos = src + dir * 100000000,
+        endpos = src + calculateSpread(dir, spread) * 100000000,
         mask = MASK_NPCWORLDSTATIC
     })
 
@@ -367,6 +381,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local src = net.ReadVector()
 	local dir = net.ReadVector()
 	local vel = net.ReadVector()
+	local spread = net.ReadVector() -- divide it by 1000 later on!!
 	local ammotype = net.ReadString()
 	local isSuppressed = net.ReadBool()
 	local ignore = (net.ReadEntity() == LocalPlayer())
@@ -375,7 +390,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_EntityFireBullets_networked received") end
 
 	if not ignore then
-		playBulletCrack(src, dir, vel, ammotype)
+		playBulletCrack(src, dir, vel, spread, ammotype)
 	end
 	
 	playReverb(src, ammotype, isSuppressed)
