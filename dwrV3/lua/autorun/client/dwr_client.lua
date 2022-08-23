@@ -245,14 +245,13 @@ end
 local function playBulletCrack(src, dir, vel, ammotype)
 	if GetConVar("cl_dwr_disable_bulletcracks"):GetInt() == 1 then return end
 	ammotype = formatAmmoType(ammotype)
-	if ammotype == "pistol" then return end
 	local earpos = getEarPos()
     local distanceState = getDistanceState(src, earpos)
     local volume = 1
     local dsp = 0
 	local soundLevel = 0 -- sound plays everywhere
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
-	local pitch = math.random(80, 120)
+	local pitch = math.random(94, 107)
 
     local trajectory = util.TraceLine( {
         start = src,
