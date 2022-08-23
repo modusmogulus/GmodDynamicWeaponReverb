@@ -5,4 +5,4 @@
 <p>Workshop page: <b>This current version doesn't have a workshop release!</b><br>This version is miles better than v1 or v2 and will include more unique sounds, better performance and more features.</p>
 
 <h2>Acknowledgement</h2>
-<p>Developers: <b>Teams</b> (modusmogulus), <b>jp4</b> (relaxtakenotes)<br> Sound designers: <b>Teams</b> (modusmogulus), <b>Kotoshmet</b> [v3 branch]</p>
+<p>Developers: <b>Teams</b> (modusmogulus), <b>jp4</b> (relaxtakenotes)<br> Sound designers: <b>Teams</b> (modusmogulus), <b>Kotoshmet</b>, <b>Torus</b><br>Testers: <b>Turo</b>, <b>Literally the whole team l0l</b></p>
