@@ -295,11 +295,12 @@ end
 local function processSound(data)
 	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
 
+	local earpos = getEarPos()
+	local src = data.Pos
+	if src == nil or not src then return data end
 	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
 	local distance = earpos:Distance(src) * UNITS_TO_METERS -- in meters
 	local volume = data.Volume
-	local src = data.Pos
-	local earpos = getEarPos()
 
     local traceToSrc = util.TraceLine( {
         start = earpos,
@@ -377,6 +378,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	if not ignore then
 		playBulletCrack(src, dir, vel, ammotype)
 	end
+	
 	playReverb(src, ammotype, isSuppressed)
 end)
 
@@ -479,12 +481,11 @@ if not game.SinglePlayer() then
 end
 
 local function explosionProcess(data)
-	if not string.find(data.SoundName, "explo") or not string.StartWith(data.SoundName, "^") or not string.find(data.SoundName, "dwr") then return end
+	if not string.find(data.SoundName, "explo") or not string.StartWith(data.SoundName, "^") or string.find(data.SoundName, "dwr") then return end
 	playReverb(data.Pos, "explosions", false)
 end
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
-	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] EntityEmitSound") end
 	explosionProcess(data)
 
 	if GetConVar("cl_dwr_process_everything"):GetInt() == 1 then
