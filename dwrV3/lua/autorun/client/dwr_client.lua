@@ -265,11 +265,9 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
 	local pitch = math.random(94, 107)
 
-	spread = spread / 1000
-
     local trajectory = util.TraceLine( {
         start = src,
-        endpos = src + calculateSpread(dir, spread) * 100000000,
+        endpos = src + calculateSpread(dir, spread) * 10000000,
         mask = MASK_NPCWORLDSTATIC
     })
 
@@ -322,6 +320,7 @@ local function processSound(data)
     })
 
     -- i hate floats
+
     local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
     local x2,y2,z2 = math.floor(src:Unpack())
     local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
@@ -378,10 +377,11 @@ end
 -- start of main
 net.Receive("dwr_EntityFireBullets_networked", function(len)
 	-- we receive this only when someone else shoots inorder to eliminate any possibility of accessing serverside-only functions from the client.
-	local src = net.ReadVector()
-	local dir = net.ReadVector()
-	local vel = net.ReadVector()
-	local spread = net.ReadVector() -- divide it by 1000 later on!!
+	-- refer to dwr_server.lua to understand why i'm diving this.
+	local src = net.ReadVector() 
+	local dir = net.ReadVector() / 1000
+	local vel = net.ReadVector() / 1000
+	local spread = net.ReadVector() / 1000
 	local ammotype = net.ReadString()
 	local isSuppressed = net.ReadBool()
 	local ignore = (net.ReadEntity() == LocalPlayer())
