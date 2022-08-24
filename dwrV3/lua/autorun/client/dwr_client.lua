@@ -61,7 +61,6 @@ end
 
 local function formatAmmoType(ammotype)
 	ammotype = string.lower(ammotype)
-	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] ammotype to be formatted: " .. ammotype) end
 	if table.HasValue(dwr_supportedAmmoTypes, ammotype) then
 		return ammotype
 	elseif ammotype == "explosions" then
@@ -169,12 +168,6 @@ local function getOcclusionPercent(earpos, pos)
 
 	local percentageOfFailedTraces = failedTraces / (traceAmount * 4)
 
-	if GetConVar("cl_dwr_debug"):GetInt() == 1 then
-	    print("[DWR] successfulTraces: ", successfulTraces)
-	    print("[DWR] failedTraces: ", failedTraces)
-	    print("[DWR] percentageOfFailedTraces: ", percentageOfFailedTraces)
-	end
-
 	return percentageOfFailedTraces
 end
 
@@ -235,18 +228,6 @@ local function playReverb(src, ammotype, isSuppressed)
 
 	timer.Simple(calculateDelay(src, earpos, soundspeed), function()
 		EmitSound(reverbSoundFile, earpos, -2, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetFloat() / 100), soundLevel, soundFlags, pitch, dsp)
-		if GetConVar("cl_dwr_debug"):GetInt() == 1 then
-			print("[DWR] Distance (Meters): " .. distance)
-			print("[DWR] delayBySoundSpeed: " .. calculateDelay(src, earpos, soundspeed))
-			print("[DWR] reverbSoundFile: " .. reverbSoundFile)
-			print("[DWR] volume: " .. volume)
-			print("[DWR] soundLevel: " .. soundLevel)
-			print("[DWR] soundFlags: " .. soundFlags)
-			print("[DWR] pitch: " .. pitch)
-			print("[DWR] dsp: " .. dsp)
-			print("[DWR] isSuprressed: " .. tostring(isSuppressed))
-			print("--------------------------------------------")
-		end
 	end)
 end
 
@@ -392,8 +373,6 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local ignore = (net.ReadEntity() == LocalPlayer())
 	if not game.SinglePlayer() and ignore then return end
 
-	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_EntityFireBullets_networked received") end
-
 	if not ignore then
 		playBulletCrack(src, dir, vel, spread, ammotype)
 	end
@@ -434,23 +413,19 @@ if not game.SinglePlayer() then
 	    
 	        if #data.AmmoType > 2 then ammotype = data.AmmoType else ammotype = weapon.Primary.Ammo end
 
-	        if data.Distance < 100 then print("[DWR] Skipping bullet because it's a melee attack") return end
+	        if data.Distance < 100 then return end
 
 	        if string.StartWith(weaponClass, "arccw_") then
 	            if data.Distance == 20000 then
-	                print("[DWR] Skipping bullet because it's... not a bullet!")
 	                return
 	            end
 	            if GetConVar("arccw_bullet_enable"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then
-	                print("[DWR] Arccw PhysBullets surface impact detected, skipping")
 	                return
 	            end
 	        end
 
 	        isSuppressed = getSuppressed(weapon, weaponClass)
 	    end
-
-		if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_firebullets_client hook called") end
 
 		playReverb(data.Src, ammotype, isSuppressed)
 	end)
@@ -471,8 +446,6 @@ if not game.SinglePlayer() then
 	    local pos = latestPhysBullet["Pos"]
 	    local ammotype = weapon.Primary.Ammo
 
-	    print("clientside physbullet detected")
-
 	    playReverb(pos, ammotype, isSuppressed)
 	    latestPhysBullet["dwr_detected"] = true
 	end)
@@ -492,7 +465,6 @@ if not game.SinglePlayer() then
 	    local pos = latestPhysBullet["bul"]["Src"]
 	    local ammotype = weapon.Primary.Ammo
 
-	    print("clientside physbullet detected")
 
 	    playReverb(pos, ammotype, isSuppressed)
 	    latestPhysBullet["dwr_detected"] = true

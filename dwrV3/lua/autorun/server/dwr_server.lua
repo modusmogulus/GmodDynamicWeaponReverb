@@ -55,7 +55,6 @@ hook.Add("Think", "dwr_detectarccwphys", function()
     local dir = latestPhysBullet["Vel"]:Angle():Forward()
     local vel = latestPhysBullet["Vel"]
 
-    PrintTable(latestPhysBullet)
 
     net.Start("dwr_EntityFireBullets_networked")
         writeVectorUncompressed(pos)
@@ -84,8 +83,6 @@ hook.Add("Think", "dwr_detecttfaphys", function()
     local ammotype = weapon.Primary.Ammo
     local dir = latestPhysBullet["velocity"]:Angle():Forward()
     local vel = latestPhysBullet["velocity"]
-
-    PrintTable(latestPhysBullet)
 
     net.Start("dwr_EntityFireBullets_networked")
         writeVectorUncompressed(pos)
@@ -130,15 +127,13 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     
         if #data.AmmoType > 2 then ammotype = data.AmmoType else ammotype = weapon.Primary.Ammo end
 
-        if data.Distance < 100 then print("[DWR] Skipping bullet because it's a melee attack") return end
+        if data.Distance < 100 then return end
 
         if string.StartWith(weaponClass, "arccw_") then
             if data.Distance == 20000 then
-                print("[DWR] Skipping bullet because it's... not a bullet!")
                 return
             end
             if GetConVar("arccw_bullet_enable"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then
-                print("[DWR] Arccw PhysBullets surface impact detected, skipping")
                 return
             end
         end
@@ -159,6 +154,4 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         net.WriteBool(isSuppressed)
         net.WriteEntity(entity) -- to exclude them in MP. they're going to get hook data anyway
     net.SendPAS(data.Src)
-    
-    print("[DWR] dwr_EntityFireBullets_networked sent")
 end)
