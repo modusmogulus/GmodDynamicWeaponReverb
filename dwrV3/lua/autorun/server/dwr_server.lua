@@ -2,6 +2,12 @@ print("[DWRV3] Server loaded.")
 
 util.AddNetworkString("dwr_EntityFireBullets_networked")
 
+local function writeVectorUncompressed(vector)
+    net.WriteFloat(vector.x)
+    net.WriteFloat(vector.y)
+    net.WriteFloat(vector.z)
+end
+
 local function getSuppressed(weapon, weaponClass)
     if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
     elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then return true
@@ -52,10 +58,10 @@ hook.Add("Think", "dwr_detectarccwphys", function()
     PrintTable(latestPhysBullet)
 
     net.Start("dwr_EntityFireBullets_networked")
-        net.WriteVector(pos*1000)
-        net.WriteVector(dir*1000)
-        net.WriteVector(vel*1000)
-        net.WriteVector(Vector(0,0,0)*1000) -- todo: get spread. too lazy to do it rn
+        writeVectorUncompressed(pos)
+        writeVectorUncompressed(dir)
+        writeVectorUncompressed(vel)
+        writeVectorUncompressed(Vector(0,0,0)) -- spread
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(latestPhysBullet["Attacker"]) -- to exclude them in MP. they're going to get hook data anyway
@@ -82,10 +88,10 @@ hook.Add("Think", "dwr_detecttfaphys", function()
     PrintTable(latestPhysBullet)
 
     net.Start("dwr_EntityFireBullets_networked")
-        net.WriteVector(pos*1000)
-        net.WriteVector(dir*1000)
-        net.WriteVector(vel*1000)
-        net.WriteVector(Vector(0,0,0)*1000) -- todo: get spread. too lazy to do it rn
+        writeVectorUncompressed(pos)
+        writeVectorUncompressed(dir)
+        writeVectorUncompressed(vel)
+        writeVectorUncompressed(Vector(0,0,0)) -- spread
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(latestPhysBullet["inflictor"]:GetOwner()) -- to exclude them in MP. they're going to get hook data anyway
@@ -98,7 +104,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     local entity = NULL
     local weapon = NULL
     local weaponIsWeird = false
-    local isSuprressed = false
+    local isSuppressed = false
     local ammotype = "none"
 
     if attacker:IsPlayer() or attacker:IsNPC() then
@@ -140,15 +146,15 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         isSuppressed = getSuppressed(weapon, weaponClass)
     end
 
-    -- gmod seems to "optimize" out small floating point numbers when u network them like that
+    -- according to docs gmod seems to "optimize" out small floating point numbers in vectors when u network them like that
     -- we have to go around it...
     -- fuck you whoever did that shit. i hate you
     -- yours truly, - jp4
     net.Start("dwr_EntityFireBullets_networked")
-        net.WriteVector(data.Src) -- i can do it to every other vector but not this one. W.T.F? maybe it's too large!!
-        net.WriteVector(data.Dir*1000)
-        net.WriteVector(Vector(0,0,0)*1000)
-        net.WriteVector(data.Spread*1000)
+        writeVectorUncompressed(data.Src)
+        writeVectorUncompressed(data.Dir)
+        writeVectorUncompressed(Vector(0,0,0)) -- velocity
+        writeVectorUncompressed(data.Spread)
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(entity) -- to exclude them in MP. they're going to get hook data anyway

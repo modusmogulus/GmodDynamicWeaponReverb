@@ -3,6 +3,14 @@ print("[DWRV3] Client loaded.")
 local UNITS_TO_METERS = 0.01905 -- multiply by this value and voila
 
 -- start of functions
+local function readVectorUncompressed()
+	local tempVec = Vector(0,0,0)
+	tempVec.x = net.ReadFloat()
+	tempVec.y = net.ReadFloat()
+	tempVec.z = net.ReadFloat()
+	return tempVec
+end
+
 local function traceableToSky(pos, offset)
     local tr = util.TraceLine({start=pos + offset, endpos=pos + Vector(offset.x, offset.y, 100000000), mask=MASK_NPCWORLDSTATIC})
 	local temp = util.TraceLine({start=tr.StartPos, endpos=pos, mask=MASK_NPCWORLDSTATIC}) -- doing this because sometimes the trace can go oob and even rarely there are cases where i cant see if it spawned oob
@@ -172,7 +180,7 @@ end
 
 local function calculateDelay(pos1, pos2, speed)
 	if speed == 0 then return 0 end
-	return pos1:Distance(pos2) * UNITS_TO_METERS / speed * UNITS_TO_METERS
+	return pos1:Distance(pos2) / speed
 end
 
 local function playReverb(src, ammotype, isSuppressed)
@@ -303,12 +311,37 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
 	end)
 end
 
-local function processSound(data)
-	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
+local function getSuppressed(weapon, weaponClass)
+    if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
+    elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then return true
+    elseif string.StartWith(weaponClass, "mg_") or weaponClass == mg_valpha then
+        if weapon.Customization != nil then
+            for name, attachments in pairs(weapon.Customization) do
+                if name != "Muzzle" then continue end
+                local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
+                if string.find(attachment.Key, "silence") then
+                    return true
+                end
+            end
+        end
+    elseif string.StartWith(weaponClass, "cw_") then
+        if weapon.ActiveAttachments != nil then
+            for k, v in pairs(weapon.ActiveAttachments) do
+                if v == false then continue end
+                local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
+                if att.isSuppressor then
+                    return true
+                end
+            end
+        end
+    end
 
+    return false
+end
+
+local function processSound(data)
 	local earpos = getEarPos()
 	local src = data.Pos
-	if src == nil or not src then return data end
 	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
 	local distance = earpos:Distance(src) * UNITS_TO_METERS -- in meters
 	local volume = data.Volume
@@ -341,47 +374,19 @@ local function processSound(data)
 
 	data.Volume = volume
 	data.DSP = dsp
-
 	return data
 end
 
-local function getSuppressed(weapon, weaponClass)
-    if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
-    elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then return true
-    elseif string.StartWith(weaponClass, "mg_") or weaponClass == mg_valpha then
-        if weapon.Customization != nil then
-            for name, attachments in pairs(weapon.Customization) do
-                if name != "Muzzle" then continue end
-                local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
-                if string.find(attachment.Key, "silence") then
-                    return true
-                end
-            end
-        end
-    elseif string.StartWith(weaponClass, "cw_") then
-        if weapon.ActiveAttachments != nil then
-            for k, v in pairs(weapon.ActiveAttachments) do
-                if v == false then continue end
-                local att = CustomizableWeaponry.registeredAttachmentsSKey[k]
-                if att.isSuppressor then
-                    return true
-                end
-            end
-        end
-    end
-
-    return false
-end
 -- end of functions
 
 -- start of main
 net.Receive("dwr_EntityFireBullets_networked", function(len)
 	-- we receive this only when someone else shoots inorder to eliminate any possibility of accessing serverside-only functions from the client.
 	-- refer to dwr_server.lua to understand why i'm diving this.
-	local src = net.ReadVector() 
-	local dir = net.ReadVector() / 1000
-	local vel = net.ReadVector() / 1000
-	local spread = net.ReadVector() / 1000
+	local src = readVectorUncompressed()
+	local dir = readVectorUncompressed()
+	local vel = readVectorUncompressed()
+	local spread = readVectorUncompressed()
 	local ammotype = net.ReadString()
 	local isSuppressed = net.ReadBool()
 	local ignore = (net.ReadEntity() == LocalPlayer())
@@ -495,11 +500,12 @@ if not game.SinglePlayer() then
 end
 
 local function explosionProcess(data)
-	if not string.find(data.SoundName, "explo") or not string.StartWith(data.SoundName, "^") or string.find(data.SoundName, "dwr") then return end
+	if not string.find(data.SoundName, "explo") or string.find(data.SoundName, "dwr") or not string.StartWith(data.SoundName, "^") then return end
 	playReverb(data.Pos, "explosions", false)
 end
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
+	if data.Pos == nil or not data.Pos then return end
 	explosionProcess(data)
 
 	if GetConVar("cl_dwr_process_everything"):GetInt() == 1 then
