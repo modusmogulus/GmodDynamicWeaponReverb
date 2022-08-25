@@ -382,10 +382,9 @@ end)
 
 net.Receive("dwr_EntityEmitSound_networked", function(len) 
 	local data = net.ReadTable()
-	local isweapon = ((string.find(data.SoundName, "weapon")) or (data.Channel == CHAN_WEAPON))
-	data = processSound(data, isweapon)
-	if data.Entity == NULL then return end
+	data = processSound(data, true)
 	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
+	--hook.Run("EntityEmitSound", data)
 end)
 
 if not game.SinglePlayer() then
