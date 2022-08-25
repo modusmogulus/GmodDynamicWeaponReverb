@@ -1,6 +1,9 @@
 print("[DWRV3] Server loaded.")
 
 util.AddNetworkString("dwr_EntityFireBullets_networked")
+util.AddNetworkString("dwr_EntityEmitSound_networked")
+
+networkSoundsConvar = CreateConVar("sv_dwr_network_sounds", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network some of the server-only sounds to the client to process them as well. May cause compatibility issues or max out the static channel.")
 
 local function writeVectorUncompressed(vector)
     net.WriteFloat(vector.x)
@@ -154,4 +157,22 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         net.WriteBool(isSuppressed)
         net.WriteEntity(entity) -- to exclude them in MP. they're going to get hook data anyway
     net.SendPAS(data.Src)
+end)
+
+
+hook.Add("EntityEmitSound", "neegor", function(data)
+    if not networkSoundsConvar:GetBool() then return end
+
+    local src = data.Entity:GetPos()
+
+    if data.Entity:IsPlayer() or data.Entity:IsNPC() then src = data.Entity:GetShootPos() end
+
+    data.Pos = src
+
+    net.Start("dwr_EntityEmitSound_networked")
+        net.WriteTable(data) -- send each element separately later
+    net.Broadcast(data.Pos)
+
+    data.Volume = 0
+    return true
 end)

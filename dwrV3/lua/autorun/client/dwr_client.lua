@@ -260,7 +260,6 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
         mask = MASK_NPCWORLDSTATIC
     })
 
-    debugoverlay.Line(trajectory.StartPos, trajectory.HitPos, 5, Color( 255, 255, 255 ), true)
     distance, point, distanceToPointOnLine = util.DistanceToLine(trajectory.StartPos, trajectory.HitPos, earpos)
     if distance * UNITS_TO_METERS > 10 then return end -- I've read somewhere that you can hear bullet cracks even from 100 meters away. But for the scale sake I'll keep it lower.
 
@@ -320,7 +319,7 @@ local function getSuppressed(weapon, weaponClass)
     return false
 end
 
-local function processSound(data)
+local function processSound(data, isweapon)
 	local earpos = getEarPos()
 	local src = data.Pos
 	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
@@ -345,12 +344,14 @@ local function processSound(data)
 		volume = volume * (1-math.Clamp(occlusionPercentage-0.5, 0, 0.5))
 	end
 
-	if distanceState == "close" then
-		local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
-		volume = volume * distanceMultiplier
-	elseif distanceState == "distant" then
-		local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
-		volume = volume * distanceMultiplier
+	if not isweapon then
+		if distanceState == "close" then
+			local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
+			volume = volume * distanceMultiplier
+		elseif distanceState == "distant" then
+			local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
+			volume = volume * distanceMultiplier
+		end
 	end
 
 	data.Volume = volume
@@ -363,7 +364,6 @@ end
 -- start of main
 net.Receive("dwr_EntityFireBullets_networked", function(len)
 	-- we receive this only when someone else shoots inorder to eliminate any possibility of accessing serverside-only functions from the client.
-	-- refer to dwr_server.lua to understand why i'm diving this.
 	local src = readVectorUncompressed()
 	local dir = readVectorUncompressed()
 	local vel = readVectorUncompressed()
@@ -378,6 +378,14 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	end
 	
 	playReverb(src, ammotype, isSuppressed)
+end)
+
+net.Receive("dwr_EntityEmitSound_networked", function(len) 
+	local data = net.ReadTable()
+	local isweapon = ((string.find(data.SoundName, "weapon")) or (data.Channel == CHAN_WEAPON))
+	data = processSound(data, isweapon)
+	if data.Entity == NULL then return end
+	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
 end)
 
 if not game.SinglePlayer() then
@@ -481,7 +489,7 @@ hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 	explosionProcess(data)
 
 	if GetConVar("cl_dwr_process_everything"):GetInt() == 1 then
-		data = processSound(data)
+		data = processSound(data, false)
 		return true
 	end
 end)
