@@ -200,7 +200,7 @@ local function playReverb(src, ammotype, isSuppressed)
     local traceToSrc = util.TraceLine( {
         start = earpos,
         endpos = src,
-        mask = MASK_NPCWORLDSTATIC
+        mask = MASK_VISIBLE
     })
 
     -- i hate floats
@@ -257,7 +257,7 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
     local trajectory = util.TraceLine( {
         start = src,
         endpos = src + calculateSpread(dir, spread) * 10000000,
-        mask = MASK_NPCWORLDSTATIC
+        mask = MASK_VISIBLE
     })
 
     distance, point, distanceToPointOnLine = util.DistanceToLine(trajectory.StartPos, trajectory.HitPos, earpos)
@@ -266,7 +266,7 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
     local traceToSrc = util.TraceLine( {
         start = earpos,
         endpos = point,
-        mask = MASK_NPCWORLDSTATIC
+        mask = MASK_VISIBLE
     })
 
     -- i hate floats
@@ -380,9 +380,11 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	playReverb(src, ammotype, isSuppressed)
 end)
 
-net.Receive("dwr_EntityEmitSound_networked", function(len) 
+net.Receive("dwr_EntityEmitSound_networked", function(len)
+	if GetConVar("cl_dwr_process_everything"):GetInt() != 1 then return end
 	local data = net.ReadTable()
 	data = processSound(data, true)
+	if data.Entity == NULL then return end
 	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
 	--hook.Run("EntityEmitSound", data)
 end)
