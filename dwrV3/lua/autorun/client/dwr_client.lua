@@ -3,6 +3,14 @@ print("[DWRV3] Client loaded.")
 local UNITS_TO_METERS = 0.01905 -- multiply by this value and voila
 
 -- start of functions
+local function readVectorUncompressed()
+	local tempVec = Vector(0,0,0)
+	tempVec.x = net.ReadFloat()
+	tempVec.y = net.ReadFloat()
+	tempVec.z = net.ReadFloat()
+	return tempVec
+end
+
 local function traceableToSky(pos, offset)
     local tr = util.TraceLine({start=pos + offset, endpos=pos + Vector(offset.x, offset.y, 100000000), mask=MASK_NPCWORLDSTATIC})
 	local temp = util.TraceLine({start=tr.StartPos, endpos=pos, mask=MASK_NPCWORLDSTATIC}) -- doing this because sometimes the trace can go oob and even rarely there are cases where i cant see if it spawned oob
@@ -53,7 +61,6 @@ end
 
 local function formatAmmoType(ammotype)
 	ammotype = string.lower(ammotype)
-	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] ammotype to be formatted: " .. ammotype) end
 	if table.HasValue(dwr_supportedAmmoTypes, ammotype) then
 		return ammotype
 	elseif ammotype == "explosions" then
@@ -161,18 +168,12 @@ local function getOcclusionPercent(earpos, pos)
 
 	local percentageOfFailedTraces = failedTraces / (traceAmount * 4)
 
-	if GetConVar("cl_dwr_debug"):GetInt() == 1 then
-	    print("[DWR] successfulTraces: ", successfulTraces)
-	    print("[DWR] failedTraces: ", failedTraces)
-	    print("[DWR] percentageOfFailedTraces: ", percentageOfFailedTraces)
-	end
-
 	return percentageOfFailedTraces
 end
 
 local function calculateDelay(pos1, pos2, speed)
 	if speed == 0 then return 0 end
-	return pos1:Distance(pos2) * UNITS_TO_METERS / speed * UNITS_TO_METERS
+	return pos1:Distance(pos2) / speed
 end
 
 local function playReverb(src, ammotype, isSuppressed)
@@ -199,7 +200,7 @@ local function playReverb(src, ammotype, isSuppressed)
     local traceToSrc = util.TraceLine( {
         start = earpos,
         endpos = src,
-        mask = MASK_NPCWORLDSTATIC
+        mask = MASK_VISIBLE
     })
 
     -- i hate floats
@@ -227,18 +228,6 @@ local function playReverb(src, ammotype, isSuppressed)
 
 	timer.Simple(calculateDelay(src, earpos, soundspeed), function()
 		EmitSound(reverbSoundFile, earpos, -2, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetFloat() / 100), soundLevel, soundFlags, pitch, dsp)
-		if GetConVar("cl_dwr_debug"):GetInt() == 1 then
-			print("[DWR] Distance (Meters): " .. distance)
-			print("[DWR] delayBySoundSpeed: " .. calculateDelay(src, earpos, soundspeed))
-			print("[DWR] reverbSoundFile: " .. reverbSoundFile)
-			print("[DWR] volume: " .. volume)
-			print("[DWR] soundLevel: " .. soundLevel)
-			print("[DWR] soundFlags: " .. soundFlags)
-			print("[DWR] pitch: " .. pitch)
-			print("[DWR] dsp: " .. dsp)
-			print("[DWR] isSuprressed: " .. tostring(isSuppressed))
-			print("--------------------------------------------")
-		end
 	end)
 end
 
@@ -265,22 +254,19 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
 	local pitch = math.random(94, 107)
 
-	spread = spread / 1000
-
     local trajectory = util.TraceLine( {
         start = src,
-        endpos = src + calculateSpread(dir, spread) * 100000000,
-        mask = MASK_NPCWORLDSTATIC
+        endpos = src + calculateSpread(dir, spread) * 10000000,
+        mask = MASK_VISIBLE
     })
 
-    debugoverlay.Line(trajectory.StartPos, trajectory.HitPos, 5, Color( 255, 255, 255 ), true)
     distance, point, distanceToPointOnLine = util.DistanceToLine(trajectory.StartPos, trajectory.HitPos, earpos)
     if distance * UNITS_TO_METERS > 10 then return end -- I've read somewhere that you can hear bullet cracks even from 100 meters away. But for the scale sake I'll keep it lower.
 
     local traceToSrc = util.TraceLine( {
         start = earpos,
         endpos = point,
-        mask = MASK_NPCWORLDSTATIC
+        mask = MASK_VISIBLE
     })
 
     -- i hate floats
@@ -303,47 +289,6 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
 		EmitSound(crackhead, point, -2, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
 		--if distanceState == "distant" then EmitSound(crackhead, point, -2, CHAN_USER_BASE, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp) end
 	end)
-end
-
-local function processSound(data)
-	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
-
-	local earpos = getEarPos()
-	local src = data.Pos
-	if src == nil or not src then return data end
-	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
-	local distance = earpos:Distance(src) * UNITS_TO_METERS -- in meters
-	local volume = data.Volume
-
-    local traceToSrc = util.TraceLine( {
-        start = earpos,
-        endpos = src,
-        mask = MASK_NPCWORLDSTATIC
-    })
-
-    -- i hate floats
-    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
-    local x2,y2,z2 = math.floor(src:Unpack())
-    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
-
-    if not direct then
-	    local occlusionPercentage = getOcclusionPercent(earpos, src)
-    	if occlusionPercentage == 1 then dsp = 30 end -- lowpass
-		volume = volume * (1-math.Clamp(occlusionPercentage-0.5, 0, 0.5))
-	end
-
-	if distanceState == "close" then
-		local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
-		volume = volume * distanceMultiplier
-	elseif distanceState == "distant" then
-		local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
-		volume = volume * distanceMultiplier
-	end
-
-	data.Volume = volume
-	data.DSP = dsp
-
-	return data
 end
 
 local function getSuppressed(weapon, weaponClass)
@@ -373,21 +318,60 @@ local function getSuppressed(weapon, weaponClass)
 
     return false
 end
+
+local function processSound(data, isweapon)
+	local earpos = getEarPos()
+	local src = data.Pos
+	local dsp = 0 -- https://developer.valvesoftware.com/wiki/DSP
+	local distance = earpos:Distance(src) * UNITS_TO_METERS -- in meters
+	local volume = data.Volume
+
+    local traceToSrc = util.TraceLine( {
+        start = earpos,
+        endpos = src,
+        mask = MASK_NPCWORLDSTATIC
+    })
+
+    -- i hate floats
+
+    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
+    local x2,y2,z2 = math.floor(src:Unpack())
+    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
+
+    if not direct then
+	    local occlusionPercentage = getOcclusionPercent(earpos, src)
+    	if occlusionPercentage == 1 then dsp = 30 end -- lowpass
+		volume = volume * (1-math.Clamp(occlusionPercentage-0.5, 0, 0.5))
+	end
+
+	if not isweapon then
+		if distanceState == "close" then
+			local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
+			volume = volume * distanceMultiplier
+		elseif distanceState == "distant" then
+			local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
+			volume = volume * distanceMultiplier
+		end
+	end
+
+	data.Volume = volume
+	data.DSP = dsp
+	return data
+end
+
 -- end of functions
 
 -- start of main
 net.Receive("dwr_EntityFireBullets_networked", function(len)
 	-- we receive this only when someone else shoots inorder to eliminate any possibility of accessing serverside-only functions from the client.
-	local src = net.ReadVector()
-	local dir = net.ReadVector()
-	local vel = net.ReadVector()
-	local spread = net.ReadVector() -- divide it by 1000 later on!!
+	local src = readVectorUncompressed()
+	local dir = readVectorUncompressed()
+	local vel = readVectorUncompressed()
+	local spread = readVectorUncompressed()
 	local ammotype = net.ReadString()
 	local isSuppressed = net.ReadBool()
 	local ignore = (net.ReadEntity() == LocalPlayer())
 	if not game.SinglePlayer() and ignore then return end
-
-	if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_EntityFireBullets_networked received") end
 
 	if not ignore then
 		playBulletCrack(src, dir, vel, spread, ammotype)
@@ -396,9 +380,17 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	playReverb(src, ammotype, isSuppressed)
 end)
 
+net.Receive("dwr_EntityEmitSound_networked", function(len)
+	if GetConVar("cl_dwr_process_everything"):GetInt() != 1 then return end
+	local data = net.ReadTable()
+	data = processSound(data, true)
+	if data.Entity == NULL then return end
+	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
+	--hook.Run("EntityEmitSound", data)
+end)
+
 if not game.SinglePlayer() then
 	hook.Add("EntityFireBullets", "dwr_firebullets_client", function(attacker, data)
-		if attacker != LocalPlayer() then return end
 		local earpos = getEarPos()
 	    local entity = NULL
 	    local weapon = NULL
@@ -418,6 +410,8 @@ if not game.SinglePlayer() then
 	        end
 	    end
 
+		if entity == NULL or entity != LocalPlayer() then return end
+
 	    if not weaponIsWeird then -- should solve all of the issues caused by external bullet sources (such as the turret mod)
 	        local weaponClass = weapon:GetClass()
 	        local entityShootPos = entity:GetShootPos()
@@ -429,23 +423,19 @@ if not game.SinglePlayer() then
 	    
 	        if #data.AmmoType > 2 then ammotype = data.AmmoType else ammotype = weapon.Primary.Ammo end
 
-	        if data.Distance < 100 then print("[DWR] Skipping bullet because it's a melee attack") return end
+	        if data.Distance < 100 then return end
 
 	        if string.StartWith(weaponClass, "arccw_") then
 	            if data.Distance == 20000 then
-	                print("[DWR] Skipping bullet because it's... not a bullet!")
 	                return
 	            end
 	            if GetConVar("arccw_bullet_enable"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then
-	                print("[DWR] Arccw PhysBullets surface impact detected, skipping")
 	                return
 	            end
 	        end
 
 	        isSuppressed = getSuppressed(weapon, weaponClass)
 	    end
-
-		if GetConVar("cl_dwr_debug"):GetInt() == 1 then print("[DWR] dwr_firebullets_client hook called") end
 
 		playReverb(data.Src, ammotype, isSuppressed)
 	end)
@@ -466,8 +456,6 @@ if not game.SinglePlayer() then
 	    local pos = latestPhysBullet["Pos"]
 	    local ammotype = weapon.Primary.Ammo
 
-	    print("clientside physbullet detected")
-
 	    playReverb(pos, ammotype, isSuppressed)
 	    latestPhysBullet["dwr_detected"] = true
 	end)
@@ -487,7 +475,6 @@ if not game.SinglePlayer() then
 	    local pos = latestPhysBullet["bul"]["Src"]
 	    local ammotype = weapon.Primary.Ammo
 
-	    print("clientside physbullet detected")
 
 	    playReverb(pos, ammotype, isSuppressed)
 	    latestPhysBullet["dwr_detected"] = true
@@ -495,15 +482,16 @@ if not game.SinglePlayer() then
 end
 
 local function explosionProcess(data)
-	if not string.find(data.SoundName, "explo") or not string.StartWith(data.SoundName, "^") or string.find(data.SoundName, "dwr") then return end
+	if not string.find(data.SoundName, "explo") or string.find(data.SoundName, "dwr") or not string.StartWith(data.SoundName, "^") then return end
 	playReverb(data.Pos, "explosions", false)
 end
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
+	if data.Pos == nil or not data.Pos then return end
 	explosionProcess(data)
 
 	if GetConVar("cl_dwr_process_everything"):GetInt() == 1 then
-		data = processSound(data)
+		data = processSound(data, false)
 		return true
 	end
 end)
