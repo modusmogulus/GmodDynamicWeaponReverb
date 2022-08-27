@@ -391,7 +391,6 @@ end)
 
 if not game.SinglePlayer() then
 	hook.Add("EntityFireBullets", "dwr_firebullets_client", function(attacker, data)
-		if attacker != LocalPlayer() then return end
 		local earpos = getEarPos()
 	    local entity = NULL
 	    local weapon = NULL
@@ -410,6 +409,8 @@ if not game.SinglePlayer() then
 	            weaponIsWeird = true
 	        end
 	    end
+
+		if entity == NULL or entity != LocalPlayer() then return end
 
 	    if not weaponIsWeird then -- should solve all of the issues caused by external bullet sources (such as the turret mod)
 	        local weaponClass = weapon:GetClass()
