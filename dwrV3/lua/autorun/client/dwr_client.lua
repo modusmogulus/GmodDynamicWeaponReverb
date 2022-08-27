@@ -2,6 +2,11 @@ print("[DWRV3] Client loaded.")
 
 local UNITS_TO_METERS = 0.01905 -- multiply by this value and voila
 
+local MASK_GLOBAL = CONTENTS_SOLID, CONTENTS_GRATE, CONTENTS_WATER
+
+local previousAmmo = 0
+local previousWep = NULL
+
 -- start of functions
 local function readVectorUncompressed()
 	local tempVec = Vector(0,0,0)
@@ -12,8 +17,8 @@ local function readVectorUncompressed()
 end
 
 local function traceableToSky(pos, offset)
-    local tr = util.TraceLine({start=pos + offset, endpos=pos + Vector(offset.x, offset.y, 100000000), mask=MASK_NPCWORLDSTATIC})
-	local temp = util.TraceLine({start=tr.StartPos, endpos=pos, mask=MASK_NPCWORLDSTATIC}) -- doing this because sometimes the trace can go oob and even rarely there are cases where i cant see if it spawned oob
+    local tr = util.TraceLine({start=pos + offset, endpos=pos + Vector(offset.x, offset.y, 100000000), mask=MASK_GLOBAL})
+	local temp = util.TraceLine({start=tr.StartPos, endpos=pos, mask=MASK_GLOBAL}) -- doing this because sometimes the trace can go oob and even rarely there are cases where i cant see if it spawned oob
 
     if temp.HitPos == pos and not temp.StartSolid and tr.HitSky then
     	return true
@@ -103,7 +108,7 @@ local function traceableToPos(earpos, pos, offset)
     local traceToOffset = util.TraceLine( {
         start = earpos,
         endpos = earpos + offset,
-        mask = MASK_NPCWORLDSTATIC
+        mask = MASK_GLOBAL
     })
 
     totalDistance = traceToOffset.HitPos:Distance(traceToOffset.StartPos)
@@ -114,7 +119,7 @@ local function traceableToPos(earpos, pos, offset)
 	    local bounceTrace = util.TraceLine( {
 	        start = lastTrace.HitPos,
 	        endpos = lastTrace.HitPos + reflectVector(lastTrace.HitPos, lastTrace.Normal) * 1000000000,
-	        mask = MASK_NPCWORLDSTATIC
+	        mask = MASK_GLOBAL
 	    })
 	    if bounceTrace.StartSolid or bounceTrace.AllSolid then break end
 
@@ -125,7 +130,7 @@ local function traceableToPos(earpos, pos, offset)
     local traceLastTraceToPos = util.TraceLine( {
         start = lastTrace.HitPos,
         endpos = pos,
-        mask = MASK_NPCWORLDSTATIC
+        mask = MASK_GLOBAL
     })
 
     totalDistance = totalDistance + traceLastTraceToPos.HitPos:Distance(traceLastTraceToPos.StartPos)
@@ -200,7 +205,7 @@ local function playReverb(src, ammotype, isSuppressed)
     local traceToSrc = util.TraceLine( {
         start = earpos,
         endpos = src,
-        mask = MASK_VISIBLE
+        mask = MASK_GLOBAL
     })
 
     -- i hate floats
@@ -257,7 +262,7 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
     local trajectory = util.TraceLine( {
         start = src,
         endpos = src + calculateSpread(dir, spread) * 10000000,
-        mask = MASK_VISIBLE
+        mask = MASK_GLOBAL
     })
 
     distance, point, distanceToPointOnLine = util.DistanceToLine(trajectory.StartPos, trajectory.HitPos, earpos)
@@ -266,7 +271,7 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
     local traceToSrc = util.TraceLine( {
         start = earpos,
         endpos = point,
-        mask = MASK_VISIBLE
+        mask = MASK_GLOBAL
     })
 
     -- i hate floats
@@ -329,7 +334,7 @@ local function processSound(data, isweapon)
     local traceToSrc = util.TraceLine( {
         start = earpos,
         endpos = src,
-        mask = MASK_NPCWORLDSTATIC
+        mask = MASK_GLOBAL
     })
 
     -- i hate floats
@@ -381,104 +386,88 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 end)
 
 net.Receive("dwr_EntityEmitSound_networked", function(len)
-	if GetConVar("cl_dwr_process_everything"):GetInt() != 1 then return end
+	--if GetConVar("cl_dwr_process_everything"):GetInt() != 1 then return end
 	local data = net.ReadTable()
 	data = processSound(data, true)
 	if data.Entity == NULL then return end
 	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
-	--hook.Run("EntityEmitSound", data)
 end)
 
 if not game.SinglePlayer() then
-	hook.Add("EntityFireBullets", "dwr_firebullets_client", function(attacker, data)
+	local function onPrimaryAttack(attacker, weapon)
 		local earpos = getEarPos()
-	    local entity = NULL
-	    local weapon = NULL
-	    local weaponIsWeird = false
+	    local entity = attacker
 	    local isSuprressed = false
-	    local ammotype = "none"
+	    local ammotype = weapon:GetPrimaryAmmoType()
+        local weaponClass = weapon:GetClass()
+        local entityShootPos = entity:GetShootPos()
 
-	    if attacker:IsPlayer() or attacker:IsNPC() then
-	        entity = attacker
-	        weapon = entity:GetActiveWeapon()
-	    else
-	        weapon = attacker
-	        entity = weapon:GetOwner()
-	        if entity == NULL then 
-	            entity = attacker
-	            weaponIsWeird = true
-	        end
-	    end
+        // probably dont even need it here but just in case
+        if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
+        if entity.dwr_shotThisTick then return end
+        entity.dwr_shotThisTick = true
+        timer.Simple(0, function() entity.dwr_shotThisTick = false end)
+    
+        if ammotype < 2 and weapon.Primary then
+        	ammotype = weapon.Primary.Ammo
+        end
 
-		if entity == NULL or entity != LocalPlayer() then return end
+        isSuppressed = getSuppressed(weapon, weaponClass)
+		playReverb(entityShootPos, ammotype, isSuppressed)
+	end
 
-	    if not weaponIsWeird then -- should solve all of the issues caused by external bullet sources (such as the turret mod)
-	        local weaponClass = weapon:GetClass()
-	        local entityShootPos = entity:GetShootPos()
+	hook.Add("CreateMove", "dwr_detect_primary_attack", function(cmd)
+		local ply = LocalPlayer()
+		local wep = ply:GetActiveWeapon()
 
-	        if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
-	        if entity.dwr_shotThisTick then return end
-	        entity.dwr_shotThisTick = true
-	        timer.Simple(0, function() entity.dwr_shotThisTick = false end) -- the most universal fix for fuckin penetration and ricochet
-	    
-	        if #data.AmmoType > 2 then ammotype = data.AmmoType else ammotype = weapon.Primary.Ammo end
+		local currentAmmo = wep:Clip1()
+		if currentAmmo < previousAmmo and not (wep != previousWep) then
+			onPrimaryAttack(ply, wep)
+		end
 
-	        if data.Distance < 100 then return end
-
-	        if string.StartWith(weaponClass, "arccw_") then
-	            if data.Distance == 20000 then
-	                return
-	            end
-	            if GetConVar("arccw_bullet_enable"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then
-	                return
-	            end
-	        end
-
-	        isSuppressed = getSuppressed(weapon, weaponClass)
-	    end
-
-		playReverb(data.Src, ammotype, isSuppressed)
+		previousAmmo = currentAmmo
+		previousWep = wep
 	end)
 
-	hook.Add("Think", "dwr_detectarccwphys", function()
-		if ArcCW == nil then return end
-	    if ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)] == nil then return end
-	    local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
-	    if latestPhysBullet["dwr_detected"] then return end
-	    if latestPhysBullet["Attacker"] == Entity(0) then return end
-	    if LocalPlayer() != latestPhysBullet["Attacker"] then return end
-
-
-	    local weapon = latestPhysBullet["Weapon"]
-	    local weaponClass = weapon:GetClass()
-
-	    local isSuppressed = getSuppressed(weapon, weaponClass)
-	    local pos = latestPhysBullet["Pos"]
-	    local ammotype = weapon.Primary.Ammo
-
-	    playReverb(pos, ammotype, isSuppressed)
-	    latestPhysBullet["dwr_detected"] = true
-	end)
-
-	hook.Add("Think", "dwr_detecttfaphys", function()
-    	if TFA == nil then return end
-
-	    local latestPhysBullet = TFA.Ballistics.Bullets["bullet_registry"][table.Count(TFA.Ballistics.Bullets["bullet_registry"])]
-	    if latestPhysBullet == nil then return end
-	    if latestPhysBullet["dwr_detected"] then return end
-	    if latestPhysBullet["owner"] != LocalPlayer() then return end
-
-	    local weapon = latestPhysBullet["inflictor"]
-	    local weaponClass = weapon:GetClass()
-
-	    local isSuppressed = getSuppressed(weapon, weaponClass)
-	    local pos = latestPhysBullet["bul"]["Src"]
-	    local ammotype = weapon.Primary.Ammo
-
-
-	    playReverb(pos, ammotype, isSuppressed)
-	    latestPhysBullet["dwr_detected"] = true
-	end)
+//	hook.Add("Think", "dwr_detectarccwphys", function()
+//		if ArcCW == nil then return end
+//
+//	    if ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)] == nil then return end
+//	    local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
+//	    if latestPhysBullet["dwr_detected"] then return end
+//	    if latestPhysBullet["Attacker"] == Entity(0) then return end
+//	    if LocalPlayer() != latestPhysBullet["Attacker"] then return end
+//
+//	    local weapon = latestPhysBullet["Weapon"]
+//	    local weaponClass = weapon:GetClass()
+//
+//	    local isSuppressed = getSuppressed(weapon, weaponClass)
+//	    local pos = latestPhysBullet["Pos"]
+//	    local ammotype = weapon.Primary.Ammo
+//
+//	    playReverb(pos, ammotype, isSuppressed)
+//	    latestPhysBullet["dwr_detected"] = true
+//	end)
+//
+//	hook.Add("Think", "dwr_detecttfaphys", function()
+//    	if TFA == nil then return end
+//
+//	    local latestPhysBullet = TFA.Ballistics.Bullets["bullet_registry"][table.Count(TFA.Ballistics.Bullets["bullet_registry"])]
+//	    if latestPhysBullet == nil then return end
+//	    if latestPhysBullet["dwr_detected"] then return end
+//	    if latestPhysBullet["owner"] != LocalPlayer() then return end
+//
+//	    local weapon = latestPhysBullet["inflictor"]
+//	    local weaponClass = weapon:GetClass()
+//
+//	    local isSuppressed = getSuppressed(weapon, weaponClass)
+//	    local pos = latestPhysBullet["bul"]["Src"]
+//	    local ammotype = weapon.Primary.Ammo
+//
+//
+//	    playReverb(pos, ammotype, isSuppressed)
+//	    latestPhysBullet["dwr_detected"] = true
+//	end)
 end
 
 local function explosionProcess(data)
@@ -491,7 +480,9 @@ hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 	explosionProcess(data)
 
 	if GetConVar("cl_dwr_process_everything"):GetInt() == 1 then
-		data = processSound(data, false)
+		local isweapon = false
+		if string.find(data.SoundName, "weapon") then isweapon = true end
+		data = processSound(data, isweapon)
 		return true
 	end
 end)

@@ -45,10 +45,7 @@ hook.Add("Think", "dwr_detectarccwphys", function()
     if ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)] == nil then return end
     local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
     if latestPhysBullet["dwr_detected"] then return end
-    --if table.IsEmpty(latestPhysBullet) then return end
-    if latestPhysBullet["OldPos"] != nil then return end
     if latestPhysBullet["Attacker"] == Entity(0) then return end
-    --if latestPhysBullet["WeaponClass"] == nil then return end
 
     local weapon = latestPhysBullet["Weapon"]
     local weaponClass = weapon:GetClass()
@@ -76,7 +73,6 @@ hook.Add("Think", "dwr_detecttfaphys", function()
     if TFA == nil then return end
     local latestPhysBullet = TFA.Ballistics.Bullets["bullet_registry"][table.Count(TFA.Ballistics.Bullets["bullet_registry"])]
     if latestPhysBullet == nil then return end
-    --if latestPhysBullet["bul"]["Src"] != latestPhysBullet["pos"] then return end
     if latestPhysBullet["dwr_detected"] then return end
 
     local weapon = latestPhysBullet["inflictor"]
@@ -164,6 +160,7 @@ end)
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
     if not networkSoundsConvar:GetBool() then return end
     if not string.find(data.SoundName, "weapon") then return end
+    if string.find(data.SoundName, "rpg") then return end
 
     local src = data.Entity:GetPos()
     if data.Entity:IsPlayer() or data.Entity:IsNPC() then src = data.Entity:GetShootPos() end
