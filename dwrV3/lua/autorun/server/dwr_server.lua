@@ -3,7 +3,7 @@ print("[DWRV3] Server loaded.")
 util.AddNetworkString("dwr_EntityFireBullets_networked")
 util.AddNetworkString("dwr_EntityEmitSound_networked")
 
-networkSoundsConvar = CreateConVar("sv_dwr_network_sounds", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network server-only gunshots to clients in order for them to get processed as well.")
+networkSoundsConvar = CreateConVar("sv_dwr_network_sounds", "0", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network server-only gunshots to clients in order for them to get processed as well.")
 networkGunshotsConvar = CreateConVar("sv_dwr_network_reverb_pas", "0", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network gunshot events only to people that are considered in range by the game.")
 
 local function writeVectorUncompressed(vector)

@@ -416,15 +416,15 @@ if not game.SinglePlayer() then
 		playReverb(entityShootPos, ammotype, isSuppressed)
 	end
 
-	hook.Add("CreateMove", "dwr_detect_primary_attack", function(cmd)
+	hook.Add("Think", "dwr_detect_primary_attack", function(cmd)
 		local ply = LocalPlayer()
+		if not ply:Alive() then return end
 		local wep = ply:GetActiveWeapon()
-
 		local currentAmmo = wep:Clip1()
 		if currentAmmo < previousAmmo and not (wep != previousWep) then
 			onPrimaryAttack(ply, wep)
 		end
-
+		
 		previousAmmo = currentAmmo
 		previousWep = wep
 	end)
