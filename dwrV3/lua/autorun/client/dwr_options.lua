@@ -1,7 +1,7 @@
 
 local function dwrClientSettings(Panel)
     Panel:NumSlider("Reverb volume", "cl_dwr_volume", 0, 100)
-    Panel:NumSlider("Sound speed", "cl_dwr_soundspeed", 0, 1000)
+    Panel:NumSlider("Sound speed", "cl_dwr_soundspeed", 0, 100000)
     Panel:NumSlider("Sound Occlusion rays", "cl_dwr_occlusion_rays", 4, 64, 0)
     Panel:NumSlider("Reflections per sound occlusion ray", "cl_dwr_occlusion_rays_reflections", 0, 4, 0)
     Panel:NumSlider("Total maximum ray distance", "cl_dwr_occlusion_rays_max_distance", 0, 100000, 0)
