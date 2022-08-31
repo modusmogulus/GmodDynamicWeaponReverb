@@ -390,6 +390,7 @@ end)
 net.Receive("dwr_EntityEmitSound_networked", function(len)
 	--if GetConVar("cl_dwr_process_everything"):GetInt() != 1 then return end
 	local data = net.ReadTable()
+	if not data then return end
 	data = processSound(data, true)
 	if data.Entity == NULL then return end
 	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
