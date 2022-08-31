@@ -2,7 +2,7 @@ print("[DWRV3] Client loaded.")
 
 local UNITS_TO_METERS = 0.01905 -- multiply by this value and voila
 
-local MASK_GLOBAL = CONTENTS_SOLID, CONTENTS_WATER, CONTENTS_GRATE
+local MASK_GLOBAL = CONTENTS_WINDOW + CONTENTS_SOLID + CONTENTS_AREAPORTAL + CONTENTS_MONSTERCLIP + CONTENTS_CURRENT_0
 
 local previousAmmo = 0
 local previousWep = NULL
@@ -18,7 +18,7 @@ end
 
 local function traceableToSky(pos, offset)
     local tr = util.TraceLine({start=pos + offset, endpos=pos + Vector(offset.x, offset.y, 100000000), mask=MASK_GLOBAL})
-	local temp = util.TraceLine({start=tr.StartPos, endpos=pos, mask={CONTENTS_WATER, CONTENTS_SOLID}}) -- doing this because sometimes the trace can go oob and even rarely there are cases where i cant see if it spawned oob
+	local temp = util.TraceLine({start=tr.StartPos, endpos=pos, mask=MASK_GLOBAL}) -- doing this because sometimes the trace can go oob and even rarely there are cases where i cant see if it spawned oob
 
     if temp.HitPos == pos and not temp.StartSolid and tr.HitSky then
     	return true
