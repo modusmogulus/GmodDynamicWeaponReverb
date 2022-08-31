@@ -339,6 +339,8 @@ local function processSound(data, isweapon)
 
     -- i hate floats
 
+    if not traceToSrc.HitPos then return end -- this should NEVER happen but it did to me once and i couldnt replicate it. idfk what that was lol
+
     local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
     local x2,y2,z2 = math.floor(src:Unpack())
     local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
