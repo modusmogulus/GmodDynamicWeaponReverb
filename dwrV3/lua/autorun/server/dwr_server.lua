@@ -98,6 +98,7 @@ hook.Add("Think", "dwr_detecttfaphys", function()
 end)
 
 hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
+    if data.Spread.z == 0.125 then return end -- for my blood decal workaround for mw sweps
     local entity = NULL
     local weapon = NULL
     local weaponIsWeird = false

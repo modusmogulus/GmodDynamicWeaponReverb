@@ -339,7 +339,7 @@ local function processSound(data, isweapon)
 
     -- i hate floats
 
-    if not traceToSrc.HitPos then return end -- this should NEVER happen but it did to me once and i couldnt replicate it. idfk what that was lol
+    if not traceToSrc then return end -- this should NEVER happen but it did to me once and i couldnt replicate it. idfk what that was lol
 
     local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
     local x2,y2,z2 = math.floor(src:Unpack())
@@ -422,6 +422,7 @@ if not game.SinglePlayer() then
 		local ply = LocalPlayer()
 		if not ply:Alive() then return end
 		local wep = ply:GetActiveWeapon()
+		if not wep then return end
 		local currentAmmo = wep:Clip1()
 		if currentAmmo < previousAmmo and not (wep != previousWep) then
 			onPrimaryAttack(ply, wep)
