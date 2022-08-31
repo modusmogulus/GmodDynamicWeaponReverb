@@ -117,7 +117,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         end
     end
 
-    if not weaponIsWeird and weapon != NULL then -- should solve all of the issues caused by external bullet sources (such as the turret mod)
+    if not weaponIsWeird and weapon != NULL and entity.GetShootPos != nil then -- should solve all of the issues caused by external bullet sources (such as the turret mod)
         local weaponClass = weapon:GetClass()
         local entityShootPos = entity:GetShootPos()
 
