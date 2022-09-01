@@ -424,6 +424,7 @@ if not game.SinglePlayer() then
 		if not ply:Alive() then return end
 		local wep = ply:GetActiveWeapon()
 		if not wep then return end
+		if not wep.Clip1 then return end
 		local currentAmmo = wep:Clip1()
 		if currentAmmo < previousAmmo and not (wep != previousWep) then
 			onPrimaryAttack(ply, wep)
