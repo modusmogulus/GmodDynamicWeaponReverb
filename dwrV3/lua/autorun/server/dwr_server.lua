@@ -126,7 +126,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         entity.dwr_shotThisTick = true
         timer.Simple(0, function() entity.dwr_shotThisTick = false end) -- the most universal fix for fuckin penetration and ricochet
     
-        if #data.AmmoType > 2 then ammotype = data.AmmoType else ammotype = weapon.Primary.Ammo end
+        if #data.AmmoType > 2 then ammotype = data.AmmoType elseif weapon.Primary then ammotype = weapon.Primary.Ammo end
 
         if data.Distance < 100 then return end
 

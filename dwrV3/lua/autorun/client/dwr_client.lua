@@ -8,6 +8,22 @@ local previousAmmo = 0
 local previousWep = NULL
 
 -- start of functions
+
+local function applySettingsToDSP(ply, cmd, args) 
+	print("snd_pitchquality 1")  
+	print("snd_disable_mixer_duck 0")  
+	print("snd_surround_speakers 1")  
+	print("dsp_enhance_stereo 1")  
+	print("dsp_slow_cpu 0")  
+	print("snd_spatialize_roundrobin 0")  
+	print("dsp_room 1")  
+	print("dsp_water 14")  
+	print("dsp_spatial 40")  
+	print("snd_defer_trace 0")
+end
+
+concommand.Add("cl_dwr_show_dsp_settings", applySettingsToDSP, nil, "Show the best dsp/sound settings for better experience")
+
 local function readVectorUncompressed()
 	local tempVec = Vector(0,0,0)
 	tempVec.x = net.ReadFloat()
@@ -284,14 +300,14 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
 	end
 
 	local crackOptions = getEntriesStartingWith("dwr/" .. "bulletcracks/" .. distanceState .. "/", dwr_reverbFiles)
-	local crackhead = crackOptions[math.random(#crackOptions)]
+	local crackhead = ")" .. crackOptions[math.random(#crackOptions)] // ")" adds spatial support
 
 	--if distanceState == "distant" then
 	--	dsp = 30
 	--end
 
 	timer.Simple(calculateDelay(trajectory.StartPos, trajectory.HitPos, vel:Length()), function()
-		EmitSound(crackhead, point, -2, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
+		EmitSound(crackhead, point, -1, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
 		--if distanceState == "distant" then EmitSound(crackhead, point, -2, CHAN_USER_BASE, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp) end
 	end)
 end
@@ -390,8 +406,8 @@ end)
 net.Receive("dwr_EntityEmitSound_networked", function(len)
 	--if GetConVar("cl_dwr_process_everything"):GetInt() != 1 then return end
 	local data = net.ReadTable()
-	if not data then return end
-	data = processSound(data, true)
+	if data == nil then return end
+	data = processSound(data, true) // where the fuck is the error coming from bro??
 	if data.Entity == NULL then return end
 	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
 end)
