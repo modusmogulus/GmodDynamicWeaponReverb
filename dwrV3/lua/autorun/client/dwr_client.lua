@@ -24,6 +24,10 @@ end
 
 concommand.Add("cl_dwr_show_dsp_settings", applySettingsToDSP, nil, "Show the best dsp/sound settings for better experience")
 
+local function equalVector(vector1, vector2)
+	return vector1:IsEqualTol(vector2, 2)
+end
+
 local function readVectorUncompressed()
 	local tempVec = Vector(0,0,0)
 	tempVec.x = net.ReadFloat()
@@ -47,7 +51,7 @@ local function getEarPos()
 	local lp = LocalPlayer()
 	local viewEntityPos = lp:GetViewEntity():GetPos()
 
-	if viewEntityPos != lp:GetPos() then return viewEntityPos end
+	if not equalVector(viewEntityPos, lp:GetPos()) then return viewEntityPos end
 
 	return lp:EyePos()
 end
@@ -73,7 +77,7 @@ end
 local function getDistanceState(pos1, pos2)
 	local distance = pos1:Distance(pos2) * UNITS_TO_METERS -- meters l0l
 	-- tweak this number later plz
-	if distance > 115 then 
+	if distance > 150 then 
 		return "distant"
 	else
 		return "close"
@@ -192,9 +196,9 @@ local function getOcclusionPercent(earpos, pos)
 	return percentageOfFailedTraces
 end
 
-local function calculateDelay(pos1, pos2, speed)
+local function calculateDelay(distance, speed)
 	if speed == 0 then return 0 end
-	return pos1:Distance(pos2) / speed
+	return distance/speed
 end
 
 local function playReverb(src, ammotype, isSuppressed)
@@ -224,14 +228,13 @@ local function playReverb(src, ammotype, isSuppressed)
         mask = MASK_GLOBAL
     })
 
-    -- i hate floats
-    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
-    local x2,y2,z2 = math.floor(src:Unpack())
-    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
+    local direct = equalVector(traceToSrc.HitPos, src)
 
     if not direct then
 	    local occlusionPercentage = getOcclusionPercent(earpos, src)
-    	if occlusionPercentage == 1 then dsp = 30 end -- lowpass
+	    if positionState != "outdoors" or getPositionState(earpos) != "outdoors" then
+    		if occlusionPercentage == 1 then dsp = 30 end -- lowpass
+    	end
 		volume = volume * (1-math.Clamp(occlusionPercentage-0.5, 0, 0.5))
 	end
 
@@ -239,15 +242,19 @@ local function playReverb(src, ammotype, isSuppressed)
 		local distanceMultiplier = math.Clamp(5000/distance^2, 0, 1)
 		volume = volume * distanceMultiplier
 	elseif distanceState == "distant" then
-		local distanceMultiplier = math.Clamp(9000/distance^2, 0, 1)
-		volume = volume * distanceMultiplier
+		local distanceMultiplier = math.Clamp(10000/distance^2, 0, 1)
+		if positionState == "outdoors" then
+			volume = volume * distanceMultiplier * 2
+		else
+			volume = volume * distanceMultiplier * 0.5
+		end
 	end
 	
 	local soundspeed = GetConVar("cl_dwr_soundspeed"):GetFloat()
 
 	if GetConVar("cl_dwr_disable_soundspeed"):GetInt() == 1 then soundspeed = 0 end
 
-	timer.Simple(calculateDelay(src, earpos, soundspeed), function()
+	timer.Simple(calculateDelay(distance, soundspeed), function()
 		EmitSound(reverbSoundFile, earpos, -2, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetFloat() / 100), soundLevel, soundFlags, pitch, dsp)
 	end)
 end
@@ -271,7 +278,7 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
     local distanceState = getDistanceState(src, earpos)
     local volume = 1
     local dsp = 0
-	local soundLevel = 0 -- sound plays everywhere
+	local soundLevel = 140
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
 	local pitch = math.random(94, 107)
 
@@ -290,10 +297,7 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
         mask = MASK_GLOBAL
     })
 
-    -- i hate floats
-    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
-    local x2,y2,z2 = math.floor(point:Unpack())
-    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
+    local direct = equalVector(traceToSrc.HitPos, point)
 
     if not direct then
     	dsp = 30
@@ -302,13 +306,8 @@ local function playBulletCrack(src, dir, vel, spread, ammotype)
 	local crackOptions = getEntriesStartingWith("dwr/" .. "bulletcracks/" .. distanceState .. "/", dwr_reverbFiles)
 	local crackhead = ")" .. crackOptions[math.random(#crackOptions)] // ")" adds spatial support
 
-	--if distanceState == "distant" then
-	--	dsp = 30
-	--end
-
-	timer.Simple(calculateDelay(trajectory.StartPos, trajectory.HitPos, vel:Length()), function()
+	timer.Simple(calculateDelay(trajectory.StartPos:Distance(trajectory.HitPos), vel:Length()), function()
 		EmitSound(crackhead, point, -1, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
-		--if distanceState == "distant" then EmitSound(crackhead, point, -2, CHAN_USER_BASE, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp) end
 	end)
 end
 
@@ -355,11 +354,9 @@ local function processSound(data, isweapon)
 
     -- i hate floats
 
-    if not traceToSrc then return end -- this should NEVER happen but it did to me once and i couldnt replicate it. idfk what that was lol
+    if not traceToSrc then return data end
 
-    local x1,y1,z1 = math.floor(traceToSrc.HitPos:Unpack())
-    local x2,y2,z2 = math.floor(src:Unpack())
-    local direct = (Vector(x1,y1,z1) == Vector(x2,y2,z2)) 
+    local direct = equalVector(traceToSrc.HitPos, src)
 
     if not direct then
 	    local occlusionPercentage = getOcclusionPercent(earpos, src)
@@ -393,7 +390,8 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local spread = readVectorUncompressed()
 	local ammotype = net.ReadString()
 	local isSuppressed = net.ReadBool()
-	local ignore = (net.ReadEntity() == LocalPlayer())
+	local entity = net.ReadEntity()
+	local ignore = (entity == LocalPlayer())
 	if not game.SinglePlayer() and ignore then return end
 
 	if not ignore then
@@ -406,7 +404,7 @@ end)
 net.Receive("dwr_EntityEmitSound_networked", function(len)
 	--if GetConVar("cl_dwr_process_everything"):GetInt() != 1 then return end
 	local data = net.ReadTable()
-	if data == nil then return end
+	if not data then return end
 	data = processSound(data, true) // where the fuck is the error coming from bro??
 	if data.Entity == NULL then return end
 	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
