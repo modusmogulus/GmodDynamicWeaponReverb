@@ -6,7 +6,7 @@ CreateConVar("cl_dwr_disable_soundspeed", "1", {FCVAR_ARCHIVE}, "Disable delay c
 CreateConVar("cl_dwr_disable_indoors_reverb", "0", {FCVAR_ARCHIVE}, "Disable reverb if the source is indoors", 0, 1)
 CreateConVar("cl_dwr_disable_outdoors_reverb", "0", {FCVAR_ARCHIVE}, "Disable reverb if the source is outdoors", 0, 1)
 CreateConVar("cl_dwr_disable_reverb", "0", {FCVAR_ARCHIVE}, "Disable literally all the reverb", 0, 1)
-CreateConVar("cl_dwr_soundspeed", "13430", {FCVAR_ARCHIVE}, "Speed of sound (m/s)", 0, 100000)
+CreateConVar("cl_dwr_soundspeed", "343", {FCVAR_ARCHIVE}, "Speed of sound (m/s)", 0, 100000)
 CreateConVar("cl_dwr_occlusion_rays", "32", {FCVAR_ARCHIVE}, "Amount of traces ran from the player to the sound source in order to determine the effects")
 CreateConVar("cl_dwr_occlusion_rays_reflections", "0", {FCVAR_ARCHIVE}, "Maximum amount of times rays can reflect (0 - disable reflections)")
 CreateConVar("cl_dwr_occlusion_rays_max_distance", "100000", {FCVAR_ARCHIVE}, "Rays will be rejected if they're longer than this distance (in hammer units a.k.a inches)")
