@@ -9,6 +9,4 @@
 
 
 <h2>Before reporting a bug or a suggestion</h2>
-<p> Please understand that we have the right to refrain from adding a suggested feature. We will try our best to respond to your suggestions and bug reports but a suggestion is not an order. Also, absolutely <b>no slurs</b> * (as a joke or not). Throwing insults here is one of the worst ways you can waste your time. -modus
-
-*don't use a term traditionally used to target a community of people unless you are a member of that community
+<p> Please understand that we have the right to refrain from adding a suggested feature. We will try our best to respond to your suggestions and bug reports but a suggestion is not an order. Also, absolutely <b>no slurs</b> (as a joke or not). Throwing insults here is one of the worst ways you can waste your time. -modus
