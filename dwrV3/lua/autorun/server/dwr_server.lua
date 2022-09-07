@@ -3,8 +3,9 @@ print("[DWRV3] Server loaded.")
 util.AddNetworkString("dwr_EntityFireBullets_networked")
 util.AddNetworkString("dwr_EntityEmitSound_networked")
 
-networkSoundsConvar = CreateConVar("sv_dwr_network_sounds", "0", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network server-only gunshots to clients in order for them to get processed as well. Introduces delay to weapon firing.")
-networkGunshotsConvar = CreateConVar("sv_dwr_network_reverb_pas", "0", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network gunshot events only to people that are considered in range by the game.")
+local networkSoundsConvar = CreateConVar("sv_dwr_network_sounds", "0", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network server-only gunshots to clients in order for them to get processed as well. Introduces delay to weapon firing.")
+local networkGunshotsConvar = CreateConVar("sv_dwr_network_reverb_pas", "0", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network gunshot events only to people that are considered in range by the game.")
+//local allowOverride = CreateConVar("sv_dwr_allow_weapon_override", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Allow weapons to alter the reverb. (Only works if the weapon devs support it)")
 
 local function writeVectorUncompressed(vector)
     net.WriteFloat(vector.x)
@@ -56,7 +57,6 @@ hook.Add("Think", "dwr_detectarccwphys", function()
     local dir = latestPhysBullet["Vel"]:Angle():Forward()
     local vel = latestPhysBullet["Vel"]
 
-
     net.Start("dwr_EntityFireBullets_networked")
         writeVectorUncompressed(pos)
         writeVectorUncompressed(dir)
@@ -66,6 +66,7 @@ hook.Add("Think", "dwr_detectarccwphys", function()
         net.WriteBool(isSuppressed)
         net.WriteEntity(latestPhysBullet["Attacker"]) -- to exclude them in MP. they're going to get hook data anyway
     if networkGunshotsConvar:GetBool() then net.SendPAS(pos) else net.Broadcast() end
+    
     latestPhysBullet["dwr_detected"] = true
 end)
 
@@ -92,6 +93,36 @@ hook.Add("Think", "dwr_detecttfaphys", function()
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(latestPhysBullet["inflictor"]:GetOwner()) -- to exclude them in MP. they're going to get hook data anyway
+    if networkGunshotsConvar:GetBool() then net.SendPAS(pos) else net.Broadcast() end
+
+    latestPhysBullet["dwr_detected"] = true
+end)
+
+hook.Add("Think", "dwr_detectarc9phys", function() 
+    if ARC9 == nil then return end
+    
+    local latestPhysBullet = ARC9.PhysBullets[table.Count(ARC9.PhysBullets)]
+    if latestPhysBullet == nil then return end
+    if latestPhysBullet["dwr_detected"] then return end
+    if table.Count(latestPhysBullet["Damaged"]) != 0 then return end
+
+    local weapon = latestPhysBullet["Weapon"]
+    local weaponClass = weapon:GetClass()
+
+    local isSuppressed = getSuppressed(weapon, weaponClass)
+    local pos = latestPhysBullet["Pos"]
+    local ammotype = weapon.Primary.Ammo
+    local dir = latestPhysBullet["Vel"]:Angle():Forward()
+    local vel = latestPhysBullet["Vel"]
+
+    net.Start("dwr_EntityFireBullets_networked")
+        writeVectorUncompressed(pos)
+        writeVectorUncompressed(dir)
+        writeVectorUncompressed(vel)
+        writeVectorUncompressed(Vector(0,0,0)) -- spread
+        net.WriteString(ammotype)
+        net.WriteBool(isSuppressed)
+        net.WriteEntity(latestPhysBullet["Attacker"]) -- to exclude them in MP. they're going to get hook data anyway
     if networkGunshotsConvar:GetBool() then net.SendPAS(pos) else net.Broadcast() end
 
     latestPhysBullet["dwr_detected"] = true
@@ -128,13 +159,19 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     
         if #data.AmmoType > 2 then ammotype = data.AmmoType elseif weapon.Primary then ammotype = weapon.Primary.Ammo end
 
-        if data.Distance < 100 then return end
+        if data.Distance < 200 then return end
 
         if string.StartWith(weaponClass, "arccw_") then
             if data.Distance == 20000 then
                 return
             end
             if GetConVar("arccw_bullet_enable"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then
+                return
+            end
+        end
+
+        if string.StartWith(weaponClass, "arc9_") then
+            if GetConVar("arc9_bullet_physics"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then
                 return
             end
         end
