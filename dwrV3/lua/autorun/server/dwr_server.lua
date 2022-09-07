@@ -98,38 +98,56 @@ hook.Add("Think", "dwr_detecttfaphys", function()
     latestPhysBullet["dwr_detected"] = true
 end)
 
-hook.Add("Think", "dwr_detectarc9phys", function() 
-    if ARC9 == nil then return end
-    
-    local latestPhysBullet = ARC9.PhysBullets[table.Count(ARC9.PhysBullets)]
-    if latestPhysBullet == nil then return end
-    if latestPhysBullet["dwr_detected"] then return end
-    if table.Count(latestPhysBullet["Damaged"]) != 0 then return end
 
-    local weapon = latestPhysBullet["Weapon"]
-    local weaponClass = weapon:GetClass()
+function ARC9:SendBullet(bullet, attacker)
+    if table.Count(bullet.Damaged) == 0 and not bullet.dwr_detected then
+        local weapon = bullet.Weapon
+        local weaponClass = weapon:GetClass()
+        
+        local isSuppressed = getSuppressed(weapon, weaponClass)
+        local pos = attacker:GetShootPos()
+        local ammotype = bullet.Weapon.Primary.Ammo
+        local dir = bullet.Vel:Angle():Forward()
+        local vel = bullet.Vel
 
-    local isSuppressed = getSuppressed(weapon, weaponClass)
-    local pos = latestPhysBullet["Pos"]
-    local ammotype = weapon.Primary.Ammo
-    local dir = latestPhysBullet["Vel"]:Angle():Forward()
-    local vel = latestPhysBullet["Vel"]
+        timer.Simple(0, function() 
+            net.Start("dwr_EntityFireBullets_networked")
+                writeVectorUncompressed(pos)
+                writeVectorUncompressed(dir)
+                writeVectorUncompressed(vel)
+                writeVectorUncompressed(Vector(0,0,0)) -- spread
+                net.WriteString(ammotype)
+                net.WriteBool(isSuppressed)
+                net.WriteEntity(attacker) -- to exclude them in MP. they're going to get hook data anyway
+            if networkGunshotsConvar:GetBool() then net.SendPAS(pos) else net.Broadcast() end
+        end)
+        bullet.dwr_detected = true
+    end
 
-    net.Start("dwr_EntityFireBullets_networked")
-        writeVectorUncompressed(pos)
-        writeVectorUncompressed(dir)
-        writeVectorUncompressed(vel)
-        writeVectorUncompressed(Vector(0,0,0)) -- spread
-        net.WriteString(ammotype)
-        net.WriteBool(isSuppressed)
-        net.WriteEntity(latestPhysBullet["Attacker"]) -- to exclude them in MP. they're going to get hook data anyway
-    if networkGunshotsConvar:GetBool() then net.SendPAS(pos) else net.Broadcast() end
+    net.Start("ARC9_sendbullet", true)
+    net.WriteVector(bullet.Pos)
+    net.WriteAngle(bullet.Vel:Angle())
+    net.WriteFloat(bullet.Vel:Length())
+    net.WriteFloat(bullet.Travelled)
+    net.WriteFloat(bullet.Drag)
+    net.WriteFloat(bullet.Gravity)
+    net.WriteBool(bullet.Indirect or false)
+    net.WriteEntity(bullet.Weapon)
+    net.WriteUInt(bullet.ModelIndex or 0, 8)
 
-    latestPhysBullet["dwr_detected"] = true
-end)
+    if attacker and attacker:IsValid() and attacker:IsPlayer() and !game.SinglePlayer() then
+        net.SendOmit(attacker)
+    else
+        if game.SinglePlayer() then
+            net.WriteEntity(attacker)
+        end
+        net.Broadcast()
+    end
+end
 
 hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     if data.Spread.z == 0.125 then return end -- for my blood decal workaround for mw sweps
+
     local entity = NULL
     local weapon = NULL
     local weaponIsWeird = false
