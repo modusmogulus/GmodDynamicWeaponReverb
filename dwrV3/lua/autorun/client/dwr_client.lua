@@ -202,6 +202,7 @@ local function calculateDelay(distance, speed)
 end
 
 local function playReverb(src, ammotype, isSuppressed, weapon)
+	weapon = weapon or {}
 	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
 	if weapon.dwr_reverbDisable then return end
 		
