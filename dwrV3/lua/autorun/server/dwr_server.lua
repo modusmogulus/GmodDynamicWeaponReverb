@@ -153,6 +153,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(entity) -- to exclude them in MP. they're going to get hook data anyway
+        if IsValid(weapon) then net.WriteEntity(weapon) else net.WriteEntity(entity) end -- we need to write SOMETHING. doesnt matter much down the line because it's just for the override wpn vars
     if networkGunshotsConvar:GetBool() then net.SendPAS(data.Src) else net.Broadcast() end
 end)
 
