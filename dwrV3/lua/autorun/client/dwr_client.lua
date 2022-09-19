@@ -201,20 +201,24 @@ local function calculateDelay(distance, speed)
 	return distance/speed
 end
 
-local function playReverb(src, ammotype, isSuppressed)
+local function playReverb(src, ammotype, isSuppressed, weapon)
 	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
+	if weapon.dwr_reverbDisable then return end
 		
 	local earpos = getEarPos()
-	local volume = 1
+	local volume = weapon.dwr_customVolume or 1
+
 	local positionState = getPositionState(src)
 	if GetConVar("cl_dwr_disable_indoors_reverb"):GetBool() == true && positionState == "indoors" then return end
 	if GetConVar("cl_dwr_disable_outdoors_reverb"):GetBool() == true && positionState == "outdoors" then return end
 	local distanceState = getDistanceState(src, earpos)
-	ammotype = formatAmmoType(ammotype)
+	ammotype = weapon.dwr_customAmmoType or formatAmmoType(ammotype)
+	if weapon.dwr_customIsSuppressed != nil then isSuppressed = weapon.dwr_customIsSuppressed end
+
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammotype .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 
-	if isSuppressed then volume = 0.3 end
+	if isSuppressed then volume = volume * 0.5 end
 
 	local soundLevel = 0 -- sound plays everywhere
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
@@ -271,9 +275,10 @@ function calculateSpread(dir, spread)
     return (dir + right * spread.x * x + up * spread.y * y)
 end
 
-local function playBulletCrack(src, dir, vel, spread, ammotype)
+local function playBulletCrack(src, dir, vel, spread, ammotype, weapon)
 	if GetConVar("cl_dwr_disable_bulletcracks"):GetInt() == 1 then return end
-	ammotype = formatAmmoType(ammotype)
+	if weapon.dwr_cracksDisable then return end
+
 	local earpos = getEarPos()
     local distanceState = getDistanceState(src, earpos)
     local volume = 1
@@ -391,14 +396,15 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local ammotype = net.ReadString()
 	local isSuppressed = net.ReadBool()
 	local entity = net.ReadEntity()
+	local weapon = net.ReadEntity()
 	local ignore = (entity == LocalPlayer())
 	if not game.SinglePlayer() and ignore then return end
 
 	if not ignore then
-		playBulletCrack(src, dir, vel, spread, ammotype)
+		playBulletCrack(src, dir, vel, spread, ammotype, weapon)
 	end
 	
-	playReverb(src, ammotype, isSuppressed)
+	playReverb(src, ammotype, isSuppressed, weapon)
 end)
 
 net.Receive("dwr_EntityEmitSound_networked", function(len)
@@ -429,8 +435,10 @@ if not game.SinglePlayer() then
         	ammotype = weapon.Primary.Ammo
         end
 
+        if weaponClass == "mg_arrow" then return end -- mw2019 sweps crossbow
+
         isSuppressed = getSuppressed(weapon, weaponClass)
-		playReverb(entityShootPos, ammotype, isSuppressed)
+		playReverb(entityShootPos, ammotype, isSuppressed, weapon)
 	end
 
 	hook.Add("Think", "dwr_detect_primary_attack", function(cmd)

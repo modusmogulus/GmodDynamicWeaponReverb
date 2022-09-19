@@ -184,24 +184,26 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     
         if #data.AmmoType > 2 then ammotype = data.AmmoType elseif weapon.Primary then ammotype = weapon.Primary.Ammo end
 
-        if data.Distance < 200 then return end
+        if data.Distance < 200 then return end -- melee
 
         if string.StartWith(weaponClass, "arccw_") then
-            if data.Distance == 20000 then
+            if data.Distance == 20000 then -- grenade launchers in arccw
                 return
             end
-            if GetConVar("arccw_bullet_enable"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then
+            if GetConVar("arccw_bullet_enable"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then -- bullet physics in arcw
                 return
             end
         end
 
         if string.StartWith(weaponClass, "arc9_") then
-            if GetConVar("arc9_bullet_physics"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then
+            if GetConVar("arc9_bullet_physics"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then -- bullet physics in arc9
                 return
             end
         end
 
-        if game.GetTimeScale() < 1 and data.Spread == Vector(0,0,0) and data.Tracer == 0 then return end
+        if game.GetTimeScale() < 1 and data.Spread == Vector(0,0,0) and data.Tracer == 0 then return end -- FEAR bullet time
+
+        if weaponClass == "mg_arrow" then return end -- mw2019 sweps crossbow
 
         isSuppressed = getSuppressed(weapon, weaponClass)
     end
@@ -218,6 +220,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         net.WriteString(ammotype)
         net.WriteBool(isSuppressed)
         net.WriteEntity(entity) -- to exclude them in MP. they're going to get hook data anyway
+        if IsValid(weapon) then net.WriteEntity(weapon) else net.WriteEntity(entity) end -- we need to write SOMETHING. doesnt matter much down the line because it's just for the override wpn vars
     if networkGunshotsConvar:GetBool() then net.SendPAS(data.Src) else net.Broadcast() end
 end)
 
