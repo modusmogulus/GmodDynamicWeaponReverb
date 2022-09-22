@@ -17,14 +17,8 @@ local function getSuppressed(weapon, weaponClass)
     if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
     elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then return true
     elseif string.StartWith(weaponClass, "mg_") or weaponClass == mg_valpha then
-        if weapon.Customization != nil then
-            for name, attachments in pairs(weapon.Customization) do
-                if name != "Muzzle" then continue end
-                local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
-                if string.find(attachment.Key, "silence") then
-                    return true
-                end
-            end
+        for slot, attachment in pairs(weapon:GetAllAttachmentsInUse()) do
+            if string.find(attachment.ClassName, "silence") or string.find(attachment.ClassName, "suppress") then return true end
         end
     elseif string.StartWith(weaponClass, "cw_") then
         if weapon.ActiveAttachments != nil then
@@ -43,7 +37,7 @@ end
 
 hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
     if ARC9 then
-        function ARC9:SendBullet(bullet, attacker)
+        function ARC9:SendBullet(bullet, attacker) -- kill............
             if table.Count(bullet.Damaged) == 0 and not bullet.dwr_detected then
                 local weapon = bullet.Weapon
                 local weaponClass = weapon:GetClass()
@@ -149,6 +143,32 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
         end)
     end
 
+    if MW_ATTS then -- global var from mw2019 sweps
+        hook.Add("OnEntityCreated", "dwr_detectmw2019phys", function(ent) 
+            if ent:GetClass() != "mg_sniper_bullet" then return end
+            timer.Simple(0, function()
+                local attacker = ent:GetOwner()
+                local weapon = attacker:GetActiveWeapon()
+                local pos = ent.LastPos
+                local dir = (ent:GetPos() - ent.LastPos):GetNormalized()
+                local vel = ent:GetAngles():Forward() * ent.Projectile.Speed
+                local isSuppressed = getSuppressed(weapon, weapon:GetClass())
+                local ammotype = "none"
+                if weapon.Primary and weapon.Primary.Ammo then ammotype = weapon.Primary.Ammo end
+
+                net.Start("dwr_EntityFireBullets_networked")
+                    writeVectorUncompressed(pos)
+                    writeVectorUncompressed(dir)
+                    writeVectorUncompressed(vel)
+                    writeVectorUncompressed(Vector(0,0,0)) -- spread
+                    net.WriteString(ammotype)
+                    net.WriteBool(isSuppressed)
+                    net.WriteEntity(attacker) -- to exclude them in MP. they're going to get hook data anyway
+                if networkGunshotsConvar:GetBool() then net.SendPAS(pos) else net.Broadcast() end
+            end)
+        end)
+    end
+
     hook.Remove("InitPostEntity", "dwr_create_physbul_hooks")
 end)
 
@@ -204,6 +224,8 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         if game.GetTimeScale() < 1 and data.Spread == Vector(0,0,0) and data.Tracer == 0 then return end -- FEAR bullet time
 
         if weaponClass == "mg_arrow" then return end -- mw2019 sweps crossbow
+
+        if weaponClass == "mg_sniper_bullet" and data.Spread == Vector(0,0,0) then return end -- physical bullets in mw2019
 
         isSuppressed = getSuppressed(weapon, weaponClass)
     end
