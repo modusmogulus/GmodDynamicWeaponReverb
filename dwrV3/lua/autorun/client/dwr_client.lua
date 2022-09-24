@@ -7,22 +7,70 @@ local MASK_GLOBAL = CONTENTS_WINDOW + CONTENTS_SOLID + CONTENTS_AREAPORTAL + CON
 local previousAmmo = 0
 local previousWep = NULL
 
+local blacklist = {}
+if not file.Read("dwr_weapon_blacklist.json") then 
+	file.Write("dwr_weapon_blacklist.json", {})
+else
+	blacklist = util.JSONToTable(file.Read("dwr_weapon_blacklist.json"))
+end
 -- start of functions
 
 local function applySettingsToDSP(ply, cmd, args) 
-	print("snd_pitchquality 1")  
-	print("snd_disable_mixer_duck 0")  
-	print("snd_surround_speakers 1")  
-	print("dsp_enhance_stereo 1")  
-	print("dsp_slow_cpu 0")  
-	print("snd_spatialize_roundrobin 0")  
-	print("dsp_room 1")  
-	print("dsp_water 14")  
-	print("dsp_spatial 40")  
+	print("snd_pitchquality 1;")  
+	print("snd_disable_mixer_duck 0;")  
+	print("snd_surround_speakers 1;")  
+	print("dsp_enhance_stereo 1;")  
+	print("dsp_slow_cpu 0;")  
+	print("snd_spatialize_roundrobin 0;")  
+	print("dsp_room 1;")  
+	print("dsp_water 14;")  
+	print("dsp_spatial 40;")  
 	print("snd_defer_trace 0")
 end
 
 concommand.Add("cl_dwr_show_dsp_settings", applySettingsToDSP, nil, "Show the best dsp/sound settings for better experience")
+
+local function changeBlacklist(action)
+	local weapon = LocalPlayer():GetActiveWeapon()
+	if not IsValid(weapon) then print("Weapon invalid. Blacklist not affected!") return end
+	local weaponClass = weapon:GetClass()
+
+	local JSONData = file.Read("dwr_weapon_blacklist.json")
+	local converted = util.JSONToTable(JSONData) or {}
+
+	if action == "remove" then 
+		print("Removed " .. weaponClass .. " from the blacklist.") 
+		converted[weaponClass] = nil
+	end
+
+	if action == "add" then
+		print("Added " .. weaponClass .. " to the blacklist.")
+		converted[weaponClass] = true
+	end
+
+	if action == "clear" then 
+		print("Blacklist cleared.") 
+		converted = {}
+	end
+
+	blacklist = converted
+	file.Write("dwr_weapon_blacklist.json", util.TableToJSON(blacklist))
+end
+
+local function removeWeaponFromBlacklist(ply, cmd, args)
+	changeBlacklist("remove")
+end
+concommand.Add("cl_dwr_blacklist_remove", removeWeaponFromBlacklist, nil, "Remove your current weapon from the blacklist.")
+
+local function addWeaponToBlacklist(ply, cmd, args)
+	changeBlacklist("add")
+end
+concommand.Add("cl_dwr_blacklist_add", addWeaponToBlacklist, nil, "Blacklist your current weapon from being affected by this mod.")
+
+local function clearBlacklist(ply, cmd, args)
+	changeBlacklist("clear")
+end
+concommand.Add("cl_dwr_blacklist_clear", clearBlacklist, nil, "Clear the blacklist from anything and everything.")
 
 local function equalVector(vector1, vector2)
 	return vector1:IsEqualTol(vector2, 2)
@@ -205,6 +253,7 @@ local function playReverb(src, ammotype, isSuppressed, weapon)
 	weapon = weapon or {}
 	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
 	if weapon.dwr_reverbDisable then return end
+	if blacklist[weapon:GetClass()] then print("in blacklist") return end
 		
 	local earpos = getEarPos()
 	local volume = weapon.dwr_customVolume or 1
@@ -279,6 +328,7 @@ end
 local function playBulletCrack(src, dir, vel, spread, ammotype, weapon)
 	if GetConVar("cl_dwr_disable_bulletcracks"):GetInt() == 1 then return end
 	if weapon.dwr_cracksDisable then return end
+	if blacklist[weapon:GetClass()] then print("in blacklist") return end
 
 	local earpos = getEarPos()
     local distanceState = getDistanceState(src, earpos)
