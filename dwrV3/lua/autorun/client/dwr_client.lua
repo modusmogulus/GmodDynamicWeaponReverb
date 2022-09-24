@@ -250,10 +250,9 @@ local function calculateDelay(distance, speed)
 end
 
 local function playReverb(src, ammotype, isSuppressed, weapon)
-	weapon = weapon or {}
 	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
+
 	if weapon.dwr_reverbDisable then return end
-	if blacklist[weapon:GetClass()] then return end
 		
 	local earpos = getEarPos()
 	local volume = weapon.dwr_customVolume or 1
@@ -328,7 +327,6 @@ end
 local function playBulletCrack(src, dir, vel, spread, ammotype, weapon)
 	if GetConVar("cl_dwr_disable_bulletcracks"):GetInt() == 1 then return end
 	if weapon.dwr_cracksDisable then return end
-	if blacklist[weapon:GetClass()] then return end
 
 	local earpos = getEarPos()
     local distanceState = getDistanceState(src, earpos)
@@ -447,8 +445,19 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local ammotype = net.ReadString()
 	local isSuppressed = net.ReadBool()
 	local entity = net.ReadEntity()
-	local weapon = net.ReadEntity()
+	local override = net.ReadTable()
 	local ignore = (entity == LocalPlayer())
+
+	local weapon = entity:GetActiveWeapon()
+	if not IsValid(weapon) then return end
+	if blacklist[weapon:GetClass()] then return end
+
+    weapon.dwr_cracksDisable = override.dwr_cracksDisable
+    weapon.dwr_reverbDisable = override.dwr_reverbDisable
+    weapon.dwr_customVolume = override.dwr_customVolume
+    weapon.dwr_customAmmoType = override.dwr_customAmmoType
+    weapon.dwr_customIsSuppressed = override.dwr_customIsSuppressed
+
 	if not game.SinglePlayer() and ignore then return end
 
 	if not ignore then
@@ -463,7 +472,7 @@ net.Receive("dwr_EntityEmitSound_networked", function(len)
 	local data = net.ReadTable()
 	if not data then return end
 	data = processSound(data, true) // where the fuck is the error coming from bro??
-	if data.Entity == NULL then return end
+	if data.Entity == NULL or data.Entity == LocalPlayer() then return end
 	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
 end)
 
@@ -472,7 +481,7 @@ if not game.SinglePlayer() then
 		local earpos = getEarPos()
 	    local entity = attacker
 	    local isSuprressed = false
-	    local ammotype = weapon:GetPrimaryAmmoType()
+	    local ammotype = game.GetAmmoName(weapon:GetPrimaryAmmoType()) 
         local weaponClass = weapon:GetClass()
         local entityShootPos = entity:GetShootPos()
 
@@ -482,7 +491,7 @@ if not game.SinglePlayer() then
         entity.dwr_shotThisTick = true
         timer.Simple(0, function() entity.dwr_shotThisTick = false end)
     
-        if ammotype < 2 and weapon.Primary then
+        if #ammotype < 2 and weapon.Primary then
         	ammotype = weapon.Primary.Ammo
         end
 

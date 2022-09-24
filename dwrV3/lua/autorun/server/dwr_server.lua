@@ -35,6 +35,27 @@ local function getSuppressed(weapon, weaponClass)
     return false
 end
 
+local function networkGunshotEvent(data)
+    -- there's probably a better way to do weapon var networking but oh well
+    local override = {}
+    override.dwr_cracksDisable = data.Weapon.dwr_cracksDisable
+    override.dwr_reverbDisable = data.Weapon.dwr_reverbDisable
+    override.dwr_customVolume = data.Weapon.dwr_customVolume
+    override.dwr_customAmmoType = data.Weapon.dwr_customAmmoType
+    override.dwr_customIsSuppressed = data.Weapon.dwr_customIsSuppressed
+
+    net.Start("dwr_EntityFireBullets_networked")
+        writeVectorUncompressed(data.Src)
+        writeVectorUncompressed(data.Dir)
+        writeVectorUncompressed(data.Vel) -- velocity
+        writeVectorUncompressed(data.Spread)
+        net.WriteString(data.Ammotype)
+        net.WriteBool(data.isSuppressed)
+        net.WriteEntity(data.Entity) -- to exclude them in MP. they're going to get hook data anyway
+        net.WriteTable(override)
+    if networkGunshotsConvar:GetBool() then net.SendPAS(data.Src) else net.Broadcast() end
+end
+
 hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
     if ARC9 then
         function ARC9:SendBullet(bullet, attacker) -- kill............
@@ -48,16 +69,17 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
                 local dir = bullet.Vel:Angle():Forward()
                 local vel = bullet.Vel
 
-                timer.Simple(0, function() 
-                    net.Start("dwr_EntityFireBullets_networked")
-                        writeVectorUncompressed(pos)
-                        writeVectorUncompressed(dir)
-                        writeVectorUncompressed(vel)
-                        writeVectorUncompressed(Vector(0,0,0)) -- spread
-                        net.WriteString(ammotype)
-                        net.WriteBool(isSuppressed)
-                        net.WriteEntity(attacker) -- to exclude them in MP. they're going to get hook data anyway
-                    if networkGunshotsConvar:GetBool() then net.SendPAS(pos) else net.Broadcast() end
+                timer.Simple(0, function()
+                    data = {}
+                    data.Src = pos
+                    data.Dir = dir
+                    data.Vel = vel
+                    data.Spread = Vector(0,0,0)
+                    data.Ammotype = ammotype
+                    data.isSuppressed = isSuppressed
+                    data.Entity = attacker
+                    data.Weapon = attacker:GetActiveWeapon()
+                    networkGunshotEvent(data)
                 end)
                 bullet.dwr_detected = true
             end
@@ -99,15 +121,16 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             local dir = latestPhysBullet["velocity"]:Angle():Forward()
             local vel = latestPhysBullet["velocity"]
 
-            net.Start("dwr_EntityFireBullets_networked")
-                writeVectorUncompressed(pos)
-                writeVectorUncompressed(dir)
-                writeVectorUncompressed(vel)
-                writeVectorUncompressed(Vector(0,0,0)) -- spread
-                net.WriteString(ammotype)
-                net.WriteBool(isSuppressed)
-                net.WriteEntity(latestPhysBullet["inflictor"]:GetOwner()) -- to exclude them in MP. they're going to get hook data anyway
-            if networkGunshotsConvar:GetBool() then net.SendPAS(pos) else net.Broadcast() end
+            data = {}
+            data.Src = pos
+            data.Dir = dir
+            data.Vel = vel
+            data.Spread = Vector(0,0,0)
+            data.Ammotype = ammotype
+            data.isSuppressed = isSuppressed
+            data.Entity = latestPhysBullet["inflictor"]:GetOwner()
+            data.Weapon = latestPhysBullet["inflictor"]
+            networkGunshotEvent(data)
 
             latestPhysBullet["dwr_detected"] = true
         end)
@@ -129,15 +152,16 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             local dir = latestPhysBullet["Vel"]:Angle():Forward()
             local vel = latestPhysBullet["Vel"]
 
-            net.Start("dwr_EntityFireBullets_networked")
-                writeVectorUncompressed(pos)
-                writeVectorUncompressed(dir)
-                writeVectorUncompressed(vel)
-                writeVectorUncompressed(Vector(0,0,0)) -- spread
-                net.WriteString(ammotype)
-                net.WriteBool(isSuppressed)
-                net.WriteEntity(latestPhysBullet["Attacker"]) -- to exclude them in MP. they're going to get hook data anyway
-            if networkGunshotsConvar:GetBool() then net.SendPAS(pos) else net.Broadcast() end
+            data = {}
+            data.Src = pos
+            data.Dir = dir
+            data.Vel = vel
+            data.Spread = Vector(0,0,0)
+            data.Ammotype = ammotype
+            data.isSuppressed = isSuppressed
+            data.Entity = latestPhysBullet["Attacker"]
+            data.Weapon = latestPhysBullet["Attacker"]:GetActiveWeapon()
+            networkGunshotEvent(data)
             
             latestPhysBullet["dwr_detected"] = true
         end)
@@ -156,15 +180,16 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
                 local ammotype = "none"
                 if weapon.Primary and weapon.Primary.Ammo then ammotype = weapon.Primary.Ammo end
 
-                net.Start("dwr_EntityFireBullets_networked")
-                    writeVectorUncompressed(pos)
-                    writeVectorUncompressed(dir)
-                    writeVectorUncompressed(vel)
-                    writeVectorUncompressed(Vector(0,0,0)) -- spread
-                    net.WriteString(ammotype)
-                    net.WriteBool(isSuppressed)
-                    net.WriteEntity(attacker) -- to exclude them in MP. they're going to get hook data anyway
-                if networkGunshotsConvar:GetBool() then net.SendPAS(pos) else net.Broadcast() end
+                data = {}
+                data.Src = pos
+                data.Dir = dir
+                data.Vel = vel
+                data.Spread = Vector(0,0,0)
+                data.Ammotype = ammotype
+                data.isSuppressed = isSuppressed
+                data.Entity = attacker
+                data.Weapon = attacker:GetActiveWeapon()
+                networkGunshotEvent(data)
             end)
         end)
     end
@@ -234,16 +259,17 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     -- we have to go around it...
     -- fuck you whoever did that shit. i hate you
     -- yours truly, - jp4
-    net.Start("dwr_EntityFireBullets_networked")
-        writeVectorUncompressed(data.Src)
-        writeVectorUncompressed(data.Dir)
-        writeVectorUncompressed(Vector(0,0,0)) -- velocity
-        writeVectorUncompressed(data.Spread)
-        net.WriteString(ammotype)
-        net.WriteBool(isSuppressed)
-        net.WriteEntity(entity) -- to exclude them in MP. they're going to get hook data anyway
-        if IsValid(weapon) then net.WriteEntity(weapon) else net.WriteEntity(entity) end -- we need to write SOMETHING. doesnt matter much down the line because it's just for the override wpn vars
-    if networkGunshotsConvar:GetBool() then net.SendPAS(data.Src) else net.Broadcast() end
+
+    dwr_data = {}
+    dwr_data.Src = data.Src
+    dwr_data.Dir = data.Dir
+    dwr_data.Vel = Vector(0,0,0)
+    dwr_data.Spread = data.Spread
+    dwr_data.Ammotype = ammotype
+    dwr_data.isSuppressed = isSuppressed
+    dwr_data.Entity = entity
+    dwr_data.Weapon = weapon
+    networkGunshotEvent(dwr_data)
 end)
 
 -- Can't get it working reliably for all scenarios. I know for a fact it works well for weapons so I'll leave it at that.
