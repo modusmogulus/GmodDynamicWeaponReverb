@@ -369,14 +369,9 @@ local function getSuppressed(weapon, weaponClass)
     if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
     elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then return true
     elseif string.StartWith(weaponClass, "mg_") or weaponClass == mg_valpha then
-        if weapon.Customization != nil then
-            for name, attachments in pairs(weapon.Customization) do
-                if name != "Muzzle" then continue end
-                local attachment = weapon.Customization[name][weapon.Customization[name].m_Index]
-                if string.find(attachment.Key, "silence") then
-                    return true
-                end
-            end
+    	if not weapon.GetAllAttachmentsInUse then return false end
+        for slot, attachment in pairs(weapon:GetAllAttachmentsInUse()) do
+            if string.find(attachment.ClassName, "silence") or string.find(attachment.ClassName, "suppress") then return true end
         end
     elseif string.StartWith(weaponClass, "cw_") then
         if weapon.ActiveAttachments != nil then
@@ -445,18 +440,18 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local ammotype = net.ReadString()
 	local isSuppressed = net.ReadBool()
 	local entity = net.ReadEntity()
-	local override = net.ReadTable()
+	--local override = net.ReadTable()
 	local ignore = (entity == LocalPlayer())
 
 	local weapon = entity:GetActiveWeapon()
 	if not IsValid(weapon) then return end
 	if blacklist[weapon:GetClass()] then return end
 
-    weapon.dwr_cracksDisable = override.dwr_cracksDisable
-    weapon.dwr_reverbDisable = override.dwr_reverbDisable
-    weapon.dwr_customVolume = override.dwr_customVolume
-    weapon.dwr_customAmmoType = override.dwr_customAmmoType
-    weapon.dwr_customIsSuppressed = override.dwr_customIsSuppressed
+    --weapon.dwr_cracksDisable = override.dwr_cracksDisable
+    --weapon.dwr_reverbDisable = override.dwr_reverbDisable
+    --weapon.dwr_customVolume = override.dwr_customVolume
+    --weapon.dwr_customAmmoType = override.dwr_customAmmoType
+    --weapon.dwr_customIsSuppressed = override.dwr_customIsSuppressed
 
 	if not game.SinglePlayer() and ignore then return end
 
@@ -468,10 +463,9 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 end)
 
 net.Receive("dwr_EntityEmitSound_networked", function(len)
-	--if GetConVar("cl_dwr_process_everything"):GetInt() != 1 then return end
 	local data = net.ReadTable()
 	if not data then return end
-	data = processSound(data, true) // where the fuck is the error coming from bro??
+	data = processSound(data, true)
 	if data.Entity == NULL or data.Entity == LocalPlayer() then return end
 	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
 end)
@@ -480,9 +474,12 @@ if not game.SinglePlayer() then
 	local function onPrimaryAttack(attacker, weapon)
 		local earpos = getEarPos()
 	    local entity = attacker
-	    local isSuprressed = false
 	    local ammotype = game.GetAmmoName(weapon:GetPrimaryAmmoType()) 
         local weaponClass = weapon:GetClass()
+
+        if weaponClass == "mg_arrow" then return end -- mw2019 sweps crossbow
+
+        local isSuppressed = getSuppressed(weapon, weaponClass)
         local entityShootPos = entity:GetShootPos()
 
         // probably dont even need it here but just in case
@@ -495,9 +492,7 @@ if not game.SinglePlayer() then
         	ammotype = weapon.Primary.Ammo
         end
 
-        if weaponClass == "mg_arrow" then return end -- mw2019 sweps crossbow
 
-        isSuppressed = getSuppressed(weapon, weaponClass)
 		playReverb(entityShootPos, ammotype, isSuppressed, weapon)
 	end
 

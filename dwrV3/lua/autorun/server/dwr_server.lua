@@ -17,6 +17,7 @@ local function getSuppressed(weapon, weaponClass)
     if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
     elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then return true
     elseif string.StartWith(weaponClass, "mg_") or weaponClass == mg_valpha then
+        if not weapon.GetAllAttachmentsInUse then return false end
         for slot, attachment in pairs(weapon:GetAllAttachmentsInUse()) do
             if string.find(attachment.ClassName, "silence") or string.find(attachment.ClassName, "suppress") then return true end
         end
@@ -36,13 +37,13 @@ local function getSuppressed(weapon, weaponClass)
 end
 
 local function networkGunshotEvent(data)
-    -- there's probably a better way to do weapon var networking but oh well
-    local override = {}
-    override.dwr_cracksDisable = data.Weapon.dwr_cracksDisable
-    override.dwr_reverbDisable = data.Weapon.dwr_reverbDisable
-    override.dwr_customVolume = data.Weapon.dwr_customVolume
-    override.dwr_customAmmoType = data.Weapon.dwr_customAmmoType
-    override.dwr_customIsSuppressed = data.Weapon.dwr_customIsSuppressed
+    -- dont even need that you stupid cunt
+    --local override = {}
+    --override.dwr_cracksDisable = data.Weapon.dwr_cracksDisable
+    --override.dwr_reverbDisable = data.Weapon.dwr_reverbDisable
+    --override.dwr_customVolume = data.Weapon.dwr_customVolume
+    --override.dwr_customAmmoType = data.Weapon.dwr_customAmmoType
+    --override.dwr_customIsSuppressed = data.Weapon.dwr_customIsSuppressed
 
     net.Start("dwr_EntityFireBullets_networked")
         writeVectorUncompressed(data.Src)
@@ -52,7 +53,7 @@ local function networkGunshotEvent(data)
         net.WriteString(data.Ammotype)
         net.WriteBool(data.isSuppressed)
         net.WriteEntity(data.Entity) -- to exclude them in MP. they're going to get hook data anyway
-        net.WriteTable(override)
+        --net.WriteTable(override)
     if networkGunshotsConvar:GetBool() then net.SendPAS(data.Src) else net.Broadcast() end
 end
 
@@ -222,12 +223,8 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         local weaponClass = weapon:GetClass()
         local entityShootPos = entity:GetShootPos()
 
-        if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
-        if entity.dwr_shotThisTick then return end
-        entity.dwr_shotThisTick = true
-        timer.Simple(0, function() entity.dwr_shotThisTick = false end) -- the most universal fix for fuckin penetration and ricochet
-    
-        if #data.AmmoType > 2 then ammotype = data.AmmoType elseif weapon.Primary then ammotype = weapon.Primary.Ammo end
+        if weaponClass == "mg_arrow" then return end -- mw2019 sweps crossbow
+        if weaponClass == "mg_sniper_bullet" and data.Spread == Vector(0,0,0) then return end -- physical bullets in mw2019
 
         if data.Distance < 200 then return end -- melee
 
@@ -248,17 +245,14 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
 
         if game.GetTimeScale() < 1 and data.Spread == Vector(0,0,0) and data.Tracer == 0 then return end -- FEAR bullet time
 
-        if weaponClass == "mg_arrow" then return end -- mw2019 sweps crossbow
-
-        if weaponClass == "mg_sniper_bullet" and data.Spread == Vector(0,0,0) then return end -- physical bullets in mw2019
-
+        if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
+        if entity.dwr_shotThisTick then return end
+        entity.dwr_shotThisTick = true
+        timer.Simple(0, function() entity.dwr_shotThisTick = false end) -- the most universal fix for fuckin penetration and ricochet
+    
+        if #data.AmmoType > 2 then ammotype = data.AmmoType elseif weapon.Primary then ammotype = weapon.Primary.Ammo end
         isSuppressed = getSuppressed(weapon, weaponClass)
     end
-
-    -- according to docs gmod seems to "optimize" out small floating point numbers in vectors when u network them like that
-    -- we have to go around it...
-    -- fuck you whoever did that shit. i hate you
-    -- yours truly, - jp4
 
     dwr_data = {}
     dwr_data.Src = data.Src
