@@ -253,7 +253,7 @@ local function playReverb(src, ammotype, isSuppressed, weapon)
 	weapon = weapon or {}
 	if GetConVar("cl_dwr_disable_reverb"):GetBool() == true then return end
 	if weapon.dwr_reverbDisable then return end
-	if blacklist[weapon:GetClass()] then print("in blacklist") return end
+	if blacklist[weapon:GetClass()] then return end
 		
 	local earpos = getEarPos()
 	local volume = weapon.dwr_customVolume or 1
@@ -328,7 +328,7 @@ end
 local function playBulletCrack(src, dir, vel, spread, ammotype, weapon)
 	if GetConVar("cl_dwr_disable_bulletcracks"):GetInt() == 1 then return end
 	if weapon.dwr_cracksDisable then return end
-	if blacklist[weapon:GetClass()] then print("in blacklist") return end
+	if blacklist[weapon:GetClass()] then return end
 
 	local earpos = getEarPos()
     local distanceState = getDistanceState(src, earpos)
