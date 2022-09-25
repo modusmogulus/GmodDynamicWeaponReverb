@@ -358,7 +358,7 @@ local function playBulletCrack(src, dir, vel, spread, ammotype, weapon)
 	end
 
 	local crackOptions = getEntriesStartingWith("dwr/" .. "bulletcracks/" .. distanceState .. "/", dwr_reverbFiles)
-	local crackhead = ")" .. crackOptions[math.random(#crackOptions)] // ")" adds spatial support
+	local crackhead = ")" .. crackOptions[math.random(#crackOptions)] // ")" adds spatial support... not like it matters because we dont have an entity at that position so it doesnt fucking work.
 
 	timer.Simple(calculateDelay(trajectory.StartPos:Distance(trajectory.HitPos), vel:Length()), function()
 		EmitSound(crackhead, point, -1, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
@@ -447,12 +447,6 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	if not IsValid(weapon) then return end
 	if blacklist[weapon:GetClass()] then return end
 
-    --weapon.dwr_cracksDisable = override.dwr_cracksDisable
-    --weapon.dwr_reverbDisable = override.dwr_reverbDisable
-    --weapon.dwr_customVolume = override.dwr_customVolume
-    --weapon.dwr_customAmmoType = override.dwr_customAmmoType
-    --weapon.dwr_customIsSuppressed = override.dwr_customIsSuppressed
-
 	if not game.SinglePlayer() and ignore then return end
 
 	if not ignore then
@@ -466,7 +460,8 @@ net.Receive("dwr_EntityEmitSound_networked", function(len)
 	local data = net.ReadTable()
 	if not data then return end
 	data = processSound(data, true)
-	if data.Entity == NULL or data.Entity == LocalPlayer() then return end
+	if data.Entity == NULL then return end
+	if not game.SinglePlayer() and data.Entity == LocalPlayer() then return end
 	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
 end)
 

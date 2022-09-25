@@ -5,7 +5,6 @@ util.AddNetworkString("dwr_EntityEmitSound_networked")
 
 local networkSoundsConvar = CreateConVar("sv_dwr_network_sounds", "0", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network server-only gunshots to clients in order for them to get processed as well. Introduces delay to weapon firing.")
 local networkGunshotsConvar = CreateConVar("sv_dwr_network_reverb_pas", "0", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network gunshot events only to people that are considered in range by the game.")
-//local allowOverride = CreateConVar("sv_dwr_allow_weapon_override", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Allow weapons to alter the reverb. (Only works if the weapon devs support it)")
 
 local function writeVectorUncompressed(vector)
     net.WriteFloat(vector.x)
@@ -37,14 +36,6 @@ local function getSuppressed(weapon, weaponClass)
 end
 
 local function networkGunshotEvent(data)
-    -- dont even need that you stupid cunt
-    --local override = {}
-    --override.dwr_cracksDisable = data.Weapon.dwr_cracksDisable
-    --override.dwr_reverbDisable = data.Weapon.dwr_reverbDisable
-    --override.dwr_customVolume = data.Weapon.dwr_customVolume
-    --override.dwr_customAmmoType = data.Weapon.dwr_customAmmoType
-    --override.dwr_customIsSuppressed = data.Weapon.dwr_customIsSuppressed
-
     net.Start("dwr_EntityFireBullets_networked")
         writeVectorUncompressed(data.Src)
         writeVectorUncompressed(data.Dir)
@@ -53,7 +44,6 @@ local function networkGunshotEvent(data)
         net.WriteString(data.Ammotype)
         net.WriteBool(data.isSuppressed)
         net.WriteEntity(data.Entity) -- to exclude them in MP. they're going to get hook data anyway
-        --net.WriteTable(override)
     if networkGunshotsConvar:GetBool() then net.SendPAS(data.Src) else net.Broadcast() end
 end
 
