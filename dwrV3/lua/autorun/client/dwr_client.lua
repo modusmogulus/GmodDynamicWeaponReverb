@@ -8,9 +8,12 @@ local previousAmmo = 0
 local previousWep = NULL
 
 local blacklist = {}
-if not file.Read("dwr_weapon_blacklist.json") then 
-	file.Write("dwr_weapon_blacklist.json", {})
+
+if not file.Read("dwr_weapon_blacklist.json") or #file.Read("dwr_weapon_blacklist.json") == 0 then
+	print("[DWRV3] Created the blacklist file.")
+	file.Write("dwr_weapon_blacklist.json", util.TableToJSON({}))
 else
+	print("[DWRV3] Loaded the blacklist file.")
 	blacklist = util.JSONToTable(file.Read("dwr_weapon_blacklist.json"))
 end
 -- start of functions
