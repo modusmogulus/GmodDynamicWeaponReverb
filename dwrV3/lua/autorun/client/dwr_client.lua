@@ -514,7 +514,7 @@ end
 
 local function explosionProcess(data)
 	if not string.find(data.SoundName, "explo") or string.find(data.SoundName, "dwr") or not string.StartWith(data.SoundName, "^") then return end
-	playReverb(data.Pos, "explosions", false)
+	playReverb(data.Pos, "explosions", false, {})
 end
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
