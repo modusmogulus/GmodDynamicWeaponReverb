@@ -471,6 +471,8 @@ if not game.SinglePlayer() then
 	    local entity = attacker
 	    local ammotype = game.GetAmmoName(weapon:GetPrimaryAmmoType()) 
         local weaponClass = weapon:GetClass()
+        
+		if blacklist[weaponClass] then return end
 
         if weaponClass == "mg_arrow" then return end -- mw2019 sweps crossbow
 
