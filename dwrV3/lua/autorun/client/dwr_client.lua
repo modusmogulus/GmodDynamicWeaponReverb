@@ -446,9 +446,12 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	--local override = net.ReadTable()
 	local ignore = (entity == LocalPlayer())
 
-	local weapon = entity:GetActiveWeapon()
-	if not IsValid(weapon) then return end
-	if blacklist[weapon:GetClass()] then return end
+	local weapon = {}
+	if entity.GetActiveWeapon then
+		weapon = entity:GetActiveWeapon()
+		if not IsValid(weapon) then return end
+		if blacklist[weapon:GetClass()] then return end
+	end
 
 	if not game.SinglePlayer() and ignore then return end
 
