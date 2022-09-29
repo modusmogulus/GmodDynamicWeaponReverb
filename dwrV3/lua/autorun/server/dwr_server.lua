@@ -238,7 +238,8 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
         if entity.dwr_shotThisTick then return end
         entity.dwr_shotThisTick = true
-        timer.Simple(0, function() entity.dwr_shotThisTick = false end) -- the most universal fix for fuckin penetration and ricochet
+        timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end) -- the most universal fix for fuckin penetration and ricochet
+                                                                                              -- tickinterval*2 is for m9k and if u shoot faster than that it'll sound cancer anyway kek
     
         if #data.AmmoType > 2 then ammotype = data.AmmoType elseif weapon.Primary then ammotype = weapon.Primary.Ammo end
         isSuppressed = getSuppressed(weapon, weaponClass)
