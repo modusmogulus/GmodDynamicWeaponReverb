@@ -8,6 +8,7 @@ local previousAmmo = 0
 local previousWep = NULL
 
 local blacklist = {}
+local serverBlacklist = {}
 
 if not file.Read("dwr_weapon_blacklist.json") or #file.Read("dwr_weapon_blacklist.json") == 0 then
 	print("[DWRV3] Created the blacklist file.")
@@ -32,6 +33,10 @@ local function applySettingsToDSP(ply, cmd, args)
 end
 
 concommand.Add("cl_dwr_show_dsp_settings", applySettingsToDSP, nil, "Show the best dsp/sound settings for better experience")
+
+concommand.Add("cl_dwr_weaponclass", function() 
+	print(LocalPlayer():GetActiveWeapon():GetClass())
+end)
 
 local function changeBlacklist(action)
 	local weapon = LocalPlayer():GetActiveWeapon()
@@ -74,6 +79,10 @@ local function clearBlacklist(ply, cmd, args)
 	changeBlacklist("clear")
 end
 concommand.Add("cl_dwr_blacklist_clear", clearBlacklist, nil, "Clear the blacklist from anything and everything.")
+
+net.Receive("dwr_sync_blacklist", function(len) 
+	serverBlacklist = net.ReadTable()
+end)
 
 local function equalVector(vector1, vector2)
 	return vector1:IsEqualTol(vector2, 2)
@@ -211,12 +220,12 @@ local function traceableToPos(earpos, pos, offset)
     return (traceLastTraceToPos.HitPos == pos)
 end
 
-function boolToInt(value)
+local function boolToInt(value)
 	-- oh come on lua, fuck you.
   	return value and 1 or 0
 end
 
-function inverted_boolToInt(value)
+local function inverted_boolToInt(value)
 	-- oh come on lua, fuck you.
   	return value and 0 or 1
 end
@@ -450,7 +459,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	if entity.GetActiveWeapon then
 		weapon = entity:GetActiveWeapon()
 		if not IsValid(weapon) then return end
-		if blacklist[weapon:GetClass()] then return end
+		if blacklist[weapon:GetClass()] or serverBlacklist[weapon:GetClass()] then return end
 	end
 
 	if not game.SinglePlayer() and ignore then return end
@@ -478,7 +487,7 @@ if not game.SinglePlayer() then
 	    local ammotype = game.GetAmmoName(weapon:GetPrimaryAmmoType()) 
         local weaponClass = weapon:GetClass()
         
-		if blacklist[weaponClass] then return end
+		if blacklist[weaponClass] or serverBlacklist[weaponClass] then return end
 
         if weaponClass == "mg_arrow" then return end -- mw2019 sweps crossbow
 

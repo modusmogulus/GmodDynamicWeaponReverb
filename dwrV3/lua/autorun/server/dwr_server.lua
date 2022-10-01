@@ -2,9 +2,69 @@ print("[DWRV3] Server loaded.")
 
 util.AddNetworkString("dwr_EntityFireBullets_networked")
 util.AddNetworkString("dwr_EntityEmitSound_networked")
+util.AddNetworkString("dwr_sync_blacklist")
 
 local networkSoundsConvar = CreateConVar("sv_dwr_network_sounds", "0", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network server-only gunshots to clients in order for them to get processed as well. Introduces delay to weapon firing.")
 local networkGunshotsConvar = CreateConVar("sv_dwr_network_reverb_pas", "0", {FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Network gunshot events only to people that are considered in range by the game.")
+local blacklist = {}
+
+if not file.Read("dwr_sv_weapon_blacklist.json") or #file.Read("dwr_sv_weapon_blacklist.json") == 0 then
+    print("[DWRV3] Created the blacklist file.")
+    file.Write("dwr_sv_weapon_blacklist.json", util.TableToJSON({}))
+else
+    print("[DWRV3] Loaded the blacklist file.")
+    blacklist = util.JSONToTable(file.Read("dwr_sv_weapon_blacklist.json"))
+end
+
+local function changeBlacklist(action, weaponClass)
+    local JSONData = file.Read("dwr_sv_weapon_blacklist.json")
+    local converted = util.JSONToTable(JSONData) or {}
+
+    if action == "remove" then 
+        print("Removed " .. weaponClass .. " from the blacklist.")
+        converted[weaponClass] = nil
+    end
+
+    if action == "add" then
+        print("Added " .. weaponClass .. " to the blacklist.")
+        converted[weaponClass] = true
+    end
+
+    if action == "clear" then 
+        print("Blacklist cleared.")
+        converted = {}
+    end
+
+    blacklist = converted
+    file.Write("dwr_sv_weapon_blacklist.json", util.TableToJSON(blacklist))
+
+    net.Start("dwr_sync_blacklist")
+        net.WriteTable(blacklist)
+    net.Broadcast()
+end
+
+local function removeWeaponFromBlacklist(ply, cmd, args)
+    if not args[1] then print("Missing weapon class.") return end
+    changeBlacklist("remove", args[1])
+end
+concommand.Add("sv_dwr_blacklist_remove", removeWeaponFromBlacklist, nil, "Remove your current weapon from the blacklist.")
+
+local function addWeaponToBlacklist(ply, cmd, args)
+    if not args[1] then print("Missing weapon class.") return end
+    changeBlacklist("add", args[1])
+end
+concommand.Add("sv_dwr_blacklist_add", addWeaponToBlacklist, nil, "Blacklist your current weapon from being affected by this mod. (clients will be able to override this)")
+
+local function clearBlacklist(ply, cmd, args)
+    changeBlacklist("clear", nil)
+end
+concommand.Add("sv_dwr_blacklist_clear", clearBlacklist, nil, "Clear the blacklist from anything and everything.")
+
+hook.Add("PlayerSpawn", "dwr_blacklist_sync", function() 
+    net.Start("dwr_sync_blacklist")
+        net.WriteTable(blacklist)
+    net.Broadcast()
+end)
 
 local function writeVectorUncompressed(vector)
     net.WriteFloat(vector.x)
