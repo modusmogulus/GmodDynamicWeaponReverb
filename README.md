@@ -1,3 +1,5 @@
+It appears the development of this mod is on hold due to every developer and sound designer having to touch grass. Enjoy bugs until jp4 or modus bother to fix anything.
+
 <h1>Dynamic Weapon Reverb V3</h1>
 <p>Universal and realistic (sort-of) reverb for guns<br>Youtube channel for previews of features: https://www.youtube.com/channel/UCUzwGGC8UlKO__F0uXLi8PQ</p>
 
