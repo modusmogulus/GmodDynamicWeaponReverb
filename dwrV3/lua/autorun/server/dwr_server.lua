@@ -107,39 +107,41 @@ local function networkGunshotEvent(data)
     if networkGunshotsConvar:GetBool() then net.SendPAS(data.Src) else net.Broadcast() end
 end
 
+local function arc9_dwr_detour(bullet, attacker)
+    if attacker.dwr_shotThisTick == nil then attacker.dwr_shotThisTick = false end
+    if attacker.dwr_shotThisTick then return end
+    if table.Count(bullet.Damaged) != 0 or bullet.dwr_detected then return end
+
+    local weapon = bullet.Weapon
+    local weaponClass = weapon:GetClass()
+    local isSuppressed = getSuppressed(weapon, weaponClass)
+    local pos = attacker:GetShootPos()
+    local ammotype = bullet.Weapon.Primary.Ammo
+    local dir = bullet.Vel:Angle():Forward()
+    local vel = bullet.Vel
+
+    timer.Simple(0, function()
+        data = {}
+        data.Src = pos
+        data.Dir = dir
+        data.Vel = vel
+        data.Spread = Vector(0,0,0)
+        data.Ammotype = ammotype
+        data.isSuppressed = isSuppressed
+        data.Entity = attacker
+        data.Weapon = attacker:GetActiveWeapon()
+        networkGunshotEvent(data)
+    end)
+    bullet.dwr_detected = true
+    attacker.dwr_shotThisTick = true
+
+    timer.Simple(engine.TickInterval()*2, function() attacker.dwr_shotThisTick = false end)
+end
+
 hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
     if ARC9 then
-        function ARC9:SendBullet(bullet, attacker) -- this is still not great.
-            if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
-
-            if table.Count(bullet.Damaged) == 0 and not bullet.dwr_detected and not entity.dwr_shotThisTick then
-                local weapon = bullet.Weapon
-                local weaponClass = weapon:GetClass()
-                
-                local isSuppressed = getSuppressed(weapon, weaponClass)
-                local pos = attacker:GetShootPos()
-                local ammotype = bullet.Weapon.Primary.Ammo
-                local dir = bullet.Vel:Angle():Forward()
-                local vel = bullet.Vel
-
-                timer.Simple(0, function()
-                    data = {}
-                    data.Src = pos
-                    data.Dir = dir
-                    data.Vel = vel
-                    data.Spread = Vector(0,0,0)
-                    data.Ammotype = ammotype
-                    data.isSuppressed = isSuppressed
-                    data.Entity = attacker
-                    data.Weapon = attacker:GetActiveWeapon()
-                    networkGunshotEvent(data)
-                end)
-                bullet.dwr_detected = true
-            end
-
-            entity.dwr_shotThisTick = true
-            timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
-
+        function ARC9:SendBullet(bullet, attacker)
+            arc9_dwr_detour(bullet, attacker)
             net.Start("ARC9_sendbullet", true)
             net.WriteVector(bullet.Pos)
             net.WriteAngle(bullet.Vel:Angle())
@@ -176,6 +178,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             local ammotype = weapon.Primary.Ammo
             local dir = latestPhysBullet["velocity"]:Angle():Forward()
             local vel = latestPhysBullet["velocity"]
+            local entity = latestPhysBullet["inflictor"]:GetOwner()
 
             if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
             if entity.dwr_shotThisTick then return end
@@ -203,6 +206,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
             if latestPhysBullet["dwr_detected"] then return end
             if latestPhysBullet["Attacker"] == Entity(0) then return end
+            local entity = latestPhysBullet["Attacker"]
 
             if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
             if entity.dwr_shotThisTick then return end
@@ -238,6 +242,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             if ent:GetClass() != "mg_sniper_bullet" and ent:GetClass() != "mg_slug" then return end
             timer.Simple(0, function()
                 local attacker = ent:GetOwner()
+                local entity = attacker
                 local weapon = attacker:GetActiveWeapon()
                 local pos = ent.LastPos
                 local dir = (ent:GetPos() - ent.LastPos):GetNormalized()
