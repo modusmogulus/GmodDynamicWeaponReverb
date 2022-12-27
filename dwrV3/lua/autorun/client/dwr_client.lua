@@ -279,7 +279,7 @@ local function playReverb(src, ammotype, isSuppressed, weapon)
 	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammotype .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 
-	if isSuppressed then volume = volume * 0.5 end
+	if isSuppressed then volume = volume * 0.25 end
 
 	local soundLevel = 0 -- sound plays everywhere
 	local soundFlags = SND_DO_NOT_OVERWRITE_EXISTING_ON_CHANNEL
@@ -412,8 +412,6 @@ local function processSound(data, isweapon)
         endpos = src,
         mask = MASK_GLOBAL
     })
-
-    -- i hate floats
 
     if not traceToSrc then return data end
 

@@ -109,8 +109,10 @@ end
 
 hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
     if ARC9 then
-        function ARC9:SendBullet(bullet, attacker) -- kill............
-            if table.Count(bullet.Damaged) == 0 and not bullet.dwr_detected then
+        function ARC9:SendBullet(bullet, attacker) -- this is still not great.
+            if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
+
+            if table.Count(bullet.Damaged) == 0 and not bullet.dwr_detected and not entity.dwr_shotThisTick then
                 local weapon = bullet.Weapon
                 local weaponClass = weapon:GetClass()
                 
@@ -134,6 +136,9 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
                 end)
                 bullet.dwr_detected = true
             end
+
+            entity.dwr_shotThisTick = true
+            timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
 
             net.Start("ARC9_sendbullet", true)
             net.WriteVector(bullet.Pos)
@@ -172,6 +177,11 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             local dir = latestPhysBullet["velocity"]:Angle():Forward()
             local vel = latestPhysBullet["velocity"]
 
+            if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
+            if entity.dwr_shotThisTick then return end
+            entity.dwr_shotThisTick = true
+            timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
+
             data = {}
             data.Src = pos
             data.Dir = dir
@@ -193,6 +203,11 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             local latestPhysBullet = ArcCW.PhysBullets[table.Count(ArcCW.PhysBullets)]
             if latestPhysBullet["dwr_detected"] then return end
             if latestPhysBullet["Attacker"] == Entity(0) then return end
+
+            if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
+            if entity.dwr_shotThisTick then return end
+            entity.dwr_shotThisTick = true
+            timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
 
             local weapon = latestPhysBullet["Weapon"]
             local weaponClass = weapon:GetClass()
@@ -219,8 +234,9 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
     end
 
     if MW_ATTS then -- global var from mw2019 sweps
-        hook.Add("OnEntityCreated", "dwr_detectmw2019phys", function(ent) 
-            if ent:GetClass() != "mg_sniper_bullet" then return end
+        hook.Add("OnEntityCreated", "dwr_detectmw2019phys", function(ent)
+            print(ent:GetClass())
+            if ent:GetClass() != "mg_sniper_bullet" and ent:GetClass() != "mg_slug" then return end
             timer.Simple(0, function()
                 local attacker = ent:GetOwner()
                 local weapon = attacker:GetActiveWeapon()
@@ -231,6 +247,11 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
                 local ammotype = "none"
                 if weapon.Primary and weapon.Primary.Ammo then ammotype = weapon.Primary.Ammo end
 
+                if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
+                if entity.dwr_shotThisTick then return end
+                entity.dwr_shotThisTick = true
+                timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
+
                 data = {}
                 data.Src = pos
                 data.Dir = dir
@@ -240,6 +261,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
                 data.isSuppressed = isSuppressed
                 data.Entity = attacker
                 data.Weapon = attacker:GetActiveWeapon()
+
                 networkGunshotEvent(data)
             end)
         end)
@@ -275,6 +297,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
 
         if weaponClass == "mg_arrow" then return end -- mw2019 sweps crossbow
         if weaponClass == "mg_sniper_bullet" and data.Spread == Vector(0,0,0) then return end -- physical bullets in mw2019
+        if weaponClass == "mg_slug" and data.Spread == Vector(0,0,0) then return end -- physical bullets in mw2019
 
         if data.Distance < 200 then return end -- melee
 
@@ -295,11 +318,12 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
 
         if game.GetTimeScale() < 1 and data.Spread == Vector(0,0,0) and data.Tracer == 0 then return end -- FEAR bullet time
 
+
         if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
         if entity.dwr_shotThisTick then return end
         entity.dwr_shotThisTick = true
-        timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end) -- the most universal fix for fuckin penetration and ricochet
-                                                                                              -- tickinterval*2 is for m9k and if u shoot faster than that it'll sound cancer anyway kek
+        timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
+                                                                                             
     
         if #data.AmmoType > 2 then ammotype = data.AmmoType elseif weapon.Primary then ammotype = weapon.Primary.Ammo end
         isSuppressed = getSuppressed(weapon, weaponClass)
