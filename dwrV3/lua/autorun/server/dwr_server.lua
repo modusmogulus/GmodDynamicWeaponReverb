@@ -235,7 +235,6 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
 
     if MW_ATTS then -- global var from mw2019 sweps
         hook.Add("OnEntityCreated", "dwr_detectmw2019phys", function(ent)
-            print(ent:GetClass())
             if ent:GetClass() != "mg_sniper_bullet" and ent:GetClass() != "mg_slug" then return end
             timer.Simple(0, function()
                 local attacker = ent:GetOwner()
