@@ -96,7 +96,7 @@ local function getSuppressed(weapon, weaponClass)
 end
 
 local function networkGunshotEvent(data)
-    net.Start("dwr_EntityFireBullets_networked")
+    net.Start("dwr_EntityFireBullets_networked", false)
         writeVectorUncompressed(data.Src)
         writeVectorUncompressed(data.Dir)
         writeVectorUncompressed(data.Vel) -- velocity
@@ -107,7 +107,10 @@ local function networkGunshotEvent(data)
     if networkGunshotsConvar:GetBool() then net.SendPAS(data.Src) else net.Broadcast() end
 end
 
-local function arc9_dwr_detour(bullet, attacker)
+function arc9_dwr_detour(args)
+    local bullet = args[2]
+    local attacker = bullet.Attacker
+
     if attacker.dwr_shotThisTick == nil then attacker.dwr_shotThisTick = false end
     if attacker.dwr_shotThisTick then return end
     if table.Count(bullet.Damaged) != 0 or bullet.dwr_detected then return end
@@ -140,28 +143,14 @@ end
 
 hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
     if ARC9 then
-        function ARC9:SendBullet(bullet, attacker)
-            arc9_dwr_detour(bullet, attacker)
-            net.Start("ARC9_sendbullet", true)
-            net.WriteVector(bullet.Pos)
-            net.WriteAngle(bullet.Vel:Angle())
-            net.WriteFloat(bullet.Vel:Length())
-            net.WriteFloat(bullet.Travelled)
-            net.WriteFloat(bullet.Drag)
-            net.WriteFloat(bullet.Gravity)
-            net.WriteBool(bullet.Indirect or false)
-            net.WriteEntity(bullet.Weapon)
-            net.WriteUInt(bullet.ModelIndex or 0, 8)
-
-            if attacker and attacker:IsValid() and attacker:IsPlayer() and !game.SinglePlayer() then
-                net.SendOmit(attacker)
-            else
-                if game.SinglePlayer() then
-                    net.WriteEntity(attacker)
-                end
-                net.Broadcast()
-            end
+        function dwr_wrapfunction(a)    -- a = old function
+          return function(...)
+            local args = { ... }
+            arc9_dwr_detour(args)
+            return a(...)
+          end
         end
+        ARC9.SendBullet = dwr_wrapfunction(ARC9.SendBullet)
     end
 
     if TFA then
@@ -321,7 +310,6 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         end
 
         if game.GetTimeScale() < 1 and data.Spread == Vector(0,0,0) and data.Tracer == 0 then return end -- FEAR bullet time
-
 
         if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
         if entity.dwr_shotThisTick then return end
