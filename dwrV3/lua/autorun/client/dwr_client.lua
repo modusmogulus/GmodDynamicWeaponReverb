@@ -270,14 +270,13 @@ local function playReverb(src, ammotype, isSuppressed, weapon)
 	local volume = weapon.dwr_customVolume or 1
 
 	local positionState = getPositionState(src)
+	local earpos_positionState = getPositionState(earpos)
 	if GetConVar("cl_dwr_disable_indoors_reverb"):GetBool() == true && positionState == "indoors" then return end
 	if GetConVar("cl_dwr_disable_outdoors_reverb"):GetBool() == true && positionState == "outdoors" then return end
 	local distanceState = getDistanceState(src, earpos)
 	ammotype = weapon.dwr_customAmmoType or formatAmmoType(ammotype)
 	if weapon.dwr_customIsSuppressed != nil then isSuppressed = weapon.dwr_customIsSuppressed end
 
-	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammotype .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
-	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 
 	if isSuppressed then volume = volume * 0.25 end
 
@@ -295,9 +294,10 @@ local function playReverb(src, ammotype, isSuppressed, weapon)
 
     local direct = equalVector(traceToSrc.HitPos, src)
 
+    local occlusionPercentage = 0
     if not direct then
-	    local occlusionPercentage = getOcclusionPercent(earpos, src)
-	    if positionState != "outdoors" or getPositionState(earpos) != "outdoors" then
+	    occlusionPercentage = getOcclusionPercent(earpos, src)
+	    if positionState != "outdoors" or earpos_positionState != "outdoors" then
     		if occlusionPercentage == 1 then dsp = 30 end -- lowpass
     	end
 		volume = volume * (1-math.Clamp(occlusionPercentage-0.5, 0, 0.5))
@@ -317,10 +317,30 @@ local function playReverb(src, ammotype, isSuppressed, weapon)
 	
 	local soundspeed = GetConVar("cl_dwr_soundspeed"):GetFloat()
 
+	// I slept bad
+	local reverbQueue = {}
+	local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammotype .. "/" .. positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
+	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
+	table.insert(reverbQueue, reverbSoundFile)
+
+	if earpos_positionState == "outdoors" and positionState == "indoors" and occlusionPercentage < 1 then
+		local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammotype .. "/" .. earpos_positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
+		local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
+		table.insert(reverbQueue, reverbSoundFile)
+	end
+
 	if GetConVar("cl_dwr_disable_soundspeed"):GetInt() == 1 then soundspeed = 0 end
 
 	timer.Simple(calculateDelay(distance, soundspeed), function()
-		EmitSound(reverbSoundFile, earpos, -2, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetFloat() / 100), soundLevel, soundFlags, pitch, dsp)
+		for _, path in ipairs(reverbQueue) do
+			local mult = 1
+			if #reverbQueue > 1 and string.find(path, "/indoors/") then
+				mult = 0.75
+			elseif #reverbQueue > 1 then
+				mult = 1.75
+			end
+			EmitSound(path, earpos, -2, CHAN_AUTO, volume * (GetConVar("cl_dwr_volume"):GetFloat() / 100) / #reverbQueue * mult, soundLevel, soundFlags, pitch, dsp)
+		end
 	end)
 end
 
