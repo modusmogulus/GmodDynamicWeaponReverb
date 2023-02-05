@@ -500,28 +500,23 @@ end)
 
 if not game.SinglePlayer() then
 	local function onPrimaryAttack(attacker, weapon)
-		local earpos = getEarPos()
-	    local entity = attacker
-	    local ammotype = game.GetAmmoName(weapon:GetPrimaryAmmoType()) 
         local weaponClass = weapon:GetClass()
-        
 		if blacklist[weaponClass] or serverBlacklist[weaponClass] then return end
-
         if weaponClass == "mg_arrow" then return end -- mw2019 sweps crossbow
 
+		local earpos = getEarPos()
+	    local entity = attacker
         local isSuppressed = getSuppressed(weapon, weaponClass)
         local entityShootPos = entity:GetShootPos()
 
-        // probably dont even need it here but just in case
-        if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
-        if entity.dwr_shotThisTick then return end
-        entity.dwr_shotThisTick = true
-        timer.Simple(0, function() entity.dwr_shotThisTick = false end)
-    
-        if #ammotype < 2 and weapon.Primary then
+	    local ammotype_num = weapon:GetPrimaryAmmoType()
+	    local ammotype = "unknown"
+        if ammotype_num != -1 then
+        	ammotype = game.GetAmmoName(ammotype_num) 
+        end
+        if (ammotype == "unknown" or #ammotype < 2) and weapon.Primary then
         	ammotype = weapon.Primary.Ammo
         end
-
 
 		playReverb(entityShootPos, ammotype, isSuppressed, weapon)
 	end
