@@ -124,7 +124,7 @@ function arc9_dwr_detour(args)
     local vel = bullet.Vel
 
     timer.Simple(0, function()
-        data = {}
+        local data = {}
         data.Src = pos
         data.Dir = dir
         data.Vel = vel
@@ -174,7 +174,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             entity.dwr_shotThisTick = true
             timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
 
-            data = {}
+            local data = {}
             data.Src = pos
             data.Dir = dir
             data.Vel = vel
@@ -211,7 +211,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             local dir = latestPhysBullet["Vel"]:Angle():Forward()
             local vel = latestPhysBullet["Vel"]
 
-            data = {}
+            local data = {}
             data.Src = pos
             data.Dir = dir
             data.Vel = vel
@@ -245,7 +245,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
                 entity.dwr_shotThisTick = true
                 timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
 
-                data = {}
+                local data = {}
                 data.Src = pos
                 data.Dir = dir
                 data.Vel = vel
@@ -321,7 +321,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         isSuppressed = getSuppressed(weapon, weaponClass)
     end
 
-    dwr_data = {}
+    local dwr_data = {}
     dwr_data.Src = data.Src
     dwr_data.Dir = data.Dir
     dwr_data.Vel = Vector(0,0,0)
