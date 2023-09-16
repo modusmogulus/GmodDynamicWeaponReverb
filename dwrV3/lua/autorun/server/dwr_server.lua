@@ -74,6 +74,7 @@ end
 
 local function getSuppressed(weapon, weaponClass)
     if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
+    elseif string.StartWith(weaponClass, "arc9_") and isfunction(weapon.GetProcessedValue) and weapon:GetProcessedValue("Silencer") then return true
     elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then return true
     elseif string.StartWith(weaponClass, "mg_") or weaponClass == mg_valpha then
         if not weapon.GetAllAttachmentsInUse then return false end
