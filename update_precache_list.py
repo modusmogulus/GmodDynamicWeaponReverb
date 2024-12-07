@@ -21,5 +21,5 @@ precacheLua += f"dwr_reverbFiles = {stringArray}\n"
 
 print(precacheLua)
 
-with open("dwrV3\\lua\\autorun\\_dwr_precache.lua", "w+") as file:
+with open("dwrV3\\lua\\autorun\\!dwr_sounds.lua", "w+") as file:
 	file.write(precacheLua)

@@ -1,3 +1,4 @@
+
 local function preferences(Panel)
     Panel:NumSlider("Reverb volume", "cl_dwr_volume", 0, 100)
     Panel:NumSlider("Sound speed", "cl_dwr_soundspeed", 0, 100000)
@@ -21,8 +22,8 @@ local function blacklisting(Panel)
     Panel:Button("Clear blacklist", "cl_dwr_blacklist_clear", {})
 end
 
-hook.Add("PopulateToolMenu", "dwr_clientsettings", function()
-    spawnmenu.AddToolMenuOption("Options", "DWR V3", "DWRClientSettings_preferences", "Preferences", "", "", preferences, {})
-    spawnmenu.AddToolMenuOption("Options", "DWR V3", "DWRClientSettings_performance", "Performance", "", "", performance, {})
-    spawnmenu.AddToolMenuOption("Options", "DWR V3", "DWRClientSettings_blacklisting", "Blacklisting", "", "", blacklisting, {})
+hook.Add("PopulateToolMenu", "dwr_clientsettings", function() 
+    spawnmenu.AddToolMenuOption("Options", "DWR V3", "DWRClientSettings_preferences", "Preferences", "", "", preferences, {} )
+    spawnmenu.AddToolMenuOption("Options", "DWR V3", "DWRClientSettings_performance", "Performance", "", "", performance, {} )
+    spawnmenu.AddToolMenuOption("Options", "DWR V3", "DWRClientSettings_blacklisting", "Blacklisting", "", "", blacklisting, {} )
 end)
