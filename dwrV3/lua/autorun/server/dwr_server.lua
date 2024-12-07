@@ -196,9 +196,9 @@ hook.Add("OnEntityCreated", "dwr_OnEntityCreated_explosiondetect", function(ent)
     end)
 end)
 
-// smg grenade
+// smg and regular grenade
 hook.Add("EntityRemoved", "dwr_EntityRemoved_explosiondetect", function(ent) 
-    if IsValid(ent) and ent:GetClass() == "grenade_ar2" then
+    if IsValid(ent) and (ent:GetClass() == "grenade_ar2" or ent:GetClass() == "npc_grenade_frag") then
         local data = {}
         data.Src = ent:GetPos()
         data.Dir = vector_origin
