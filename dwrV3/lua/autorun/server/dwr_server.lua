@@ -423,8 +423,31 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
             end
         end
 
+        // https://github.com/HaodongMo/tacrp/blob/e69df9e7d81b33065f1a2087cc8da14550ada365/lua/weapons/tacrp_base/sh_shoot.lua#L262
         if string.StartWith(weaponClass, "tacrp_") then
-            if tacrp_physbullet:GetInt() == 1 and data.Spread == vector_origin then -- bullet physics in arc9
+            local hitscan = !TacRP.ConVars["physbullet"]:GetBool()
+            local dist = 100000
+
+            local dir = weapon:GetShootDir()
+
+            if !hitscan and (!TacRP.ConVars["client_damage"]:GetBool()) then
+                dist = math.max(weapon:GetValue("MuzzleVelocity"), 15000) * engine.TickInterval() * game.GetTimeScale() * (num == 1 and 2 or 1) * (game.IsDedicated() and 1 or 2)
+
+                local threshold = dir:Forward() * dist
+
+                local inst_tr = util.TraceLine({
+                    start = weapon:GetMuzzleOrigin(),
+                    endpos = weapon:GetMuzzleOrigin() + threshold,
+                    mask = MASK_SHOT,
+                    filter = {weapon:GetOwner(), weapon:GetOwner():GetVehicle(), weapon},
+                })
+
+                if inst_tr.Hit and !inst_tr.HitSky then
+                    hitscan = true
+                end
+            end
+
+            if not hitscan and data.Spread == vector_origin then -- bullet physics in tacrp
                 return
             end
         end
