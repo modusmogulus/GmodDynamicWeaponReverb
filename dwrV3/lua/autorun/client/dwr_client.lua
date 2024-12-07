@@ -97,7 +97,7 @@ local function readVectorUncompressed()
 end
 
 local function traceableToSky(pos, offset)
-    local tr = util.TraceLine({start=pos + offset, endpos=pos + offset + vector_up * 10000000, mask=MASK_GLOBAL})
+    local tr = util.TraceLine({start=pos + offset, endpos=pos + offset + vector_up * 56754, mask=MASK_GLOBAL})
 	local temp = util.TraceLine({start=tr.StartPos, endpos=pos, mask=MASK_GLOBAL}) -- doing this because sometimes the trace can go oob and even rarely there are cases where i cant see if it spawned oob
 
     if temp.HitPos == pos and not temp.StartSolid and tr.HitSky then
@@ -211,7 +211,7 @@ local function traceableToPos(earpos, pos, offset)
 	for i=1,bounceLimit,1 do
 	    local bounceTrace = util.TraceLine( {
 	        start = lastTrace.HitPos,
-	        endpos = lastTrace.HitPos + reflectVector(lastTrace.HitPos, lastTrace.Normal) * 1000000000,
+	        endpos = lastTrace.HitPos + reflectVector(lastTrace.HitPos, lastTrace.Normal) * 56754,
 	        mask = MASK_GLOBAL
 	    })
 	    if bounceTrace.StartSolid or bounceTrace.AllSolid then break end
@@ -244,7 +244,7 @@ local function inverted_boolToInt(value)
 end
 
 local cl_dwr_occlusion_rays = GetConVar("cl_dwr_occlusion_rays")
-local x_vector_offset = Vector(100000000,0,0)
+local x_vector_offset = Vector(56754,0,0)
 
 local function getOcclusionPercent(earpos, pos)
 	local traceAmount = math.floor(cl_dwr_occlusion_rays:GetInt()/4)
@@ -255,7 +255,7 @@ local function getOcclusionPercent(earpos, pos)
 	for j=1, 4, 1 do
 		local singletrace = x_vector_offset
 
-		singletrace.x = 100000000
+		singletrace.x = 56754
 		singletrace.y = 0
 		singletrace.z = 0
 
@@ -399,7 +399,7 @@ local function playBulletCrack(src, dir, vel, spread, ammotype, weapon)
 
     local trajectory = util.TraceLine( {
         start = src,
-        endpos = src + calculateSpread(dir, spread) * 10000000,
+        endpos = src + calculateSpread(dir, spread) * 56754,
         mask = MASK_GLOBAL
     })
 
@@ -514,7 +514,7 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 
 	if not game.SinglePlayer() and ignore then return end
 
-	if not ignore then
+	if not ignore and not explosion then
 		playBulletCrack(src, dir, vel, spread, ammotype, weapon)
 	end
 
