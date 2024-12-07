@@ -419,8 +419,8 @@ local function playBulletCrack(src, dir, vel, spread, ammotype, weapon)
 	end
 
 	local crackOptions = getEntriesStartingWith("dwr/" .. "bulletcracks/" .. distanceState .. "/", dwr_reverbFiles)
-	local crackhead = ")" .. crackOptions[math.random(#crackOptions)] // ")" adds spatial support... not like it matters because we dont have an entity at that position so it doesnt fucking work.
-
+	local crackhead = crackOptions[math.random(#crackOptions)] // ")" adds spatial support... not like it matters because we dont have an entity at that position so it doesnt fucking work.
+	
 	timer.Simple(calculateDelay(trajectory.StartPos:Distance(trajectory.HitPos), vel:Length()), function()
 		EmitSound(crackhead, point, -1, CHAN_AUTO, volume * (cl_dwr_volume:GetInt() / 100), soundLevel, soundFlags, pitch, dsp)
 	end)
@@ -500,6 +500,8 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 	local ammotype = net.ReadString()
 	local isSuppressed = net.ReadBool()
 	local entity = net.ReadEntity()
+	local explosion = net.ReadBool()
+
 	--local override = net.ReadTable()
 	local ignore = (entity == LocalPlayer())
 
@@ -516,7 +518,11 @@ net.Receive("dwr_EntityFireBullets_networked", function(len)
 		playBulletCrack(src, dir, vel, spread, ammotype, weapon)
 	end
 
-	playReverb(src, ammotype, isSuppressed, weapon)
+	if explosion then
+		playReverb(src, "explosions", false, {})
+	else
+		playReverb(src, ammotype, isSuppressed, weapon)
+	end
 end)
 
 local SP = game.SinglePlayer()
@@ -569,16 +575,10 @@ if not SP then
 	end)
 end
 
-local function explosionProcess(data)
-	if not string.find(data.SoundName, "explo") or string.find(data.SoundName, "dwr") or not string.StartWith(data.SoundName, "^") then return end
-	playReverb(data.Pos, "explosions", false, {})
-end
-
 local cl_dwr_process_everything = GetConVar("cl_dwr_process_everything")
 
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 	if data.Pos == nil or not data.Pos then return end
-	explosionProcess(data)
 
 	if cl_dwr_process_everything:GetInt() == 1 then
 		local isweapon = false

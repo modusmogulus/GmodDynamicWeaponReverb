@@ -105,6 +105,7 @@ local function networkGunshotEvent(data)
         net.WriteString(data.Ammotype)
         net.WriteBool(data.isSuppressed)
         net.WriteEntity(data.Entity) -- to exclude them in MP. they're going to get hook data anyway
+        net.WriteBool(data.Explosion)
     if networkGunshotsConvar:GetBool() then net.SendPAS(data.Src) else net.Broadcast() end
 end
 
@@ -176,7 +177,69 @@ function arc9_dwr_detour(args)
     timer.Simple(engine.TickInterval()*2, function() attacker.dwr_shotThisTick = false end)
 end
 
-hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
+// rpg, other entities that might use env_explosion
+hook.Add("OnEntityCreated", "dwr_OnEntityCreated_explosiondetect", function(ent) 
+    timer.Simple(0, function() 
+        if IsValid(ent) and ent:GetClass() == "env_explosion" then
+            local data = {}
+            data.Src = ent:GetPos()
+            data.Dir = vector_origin
+            data.Vel = vector_origin
+            data.Spread = vector_origin
+            data.Ammotype = "explosions"
+            data.isSuppressed = false
+            data.Entity = ent
+            data.Weapon = ent
+            data.Explosion = true
+            networkGunshotEvent(data)
+        end
+    end)
+end)
+
+// smg grenade
+hook.Add("EntityRemoved", "dwr_EntityRemoved_explosiondetect", function(ent) 
+    if IsValid(ent) and ent:GetClass() == "grenade_ar2" then
+        local data = {}
+        data.Src = ent:GetPos()
+        data.Dir = vector_origin
+        data.Vel = vector_origin
+        data.Spread = vector_origin
+        data.Ammotype = "explosions"
+        data.isSuppressed = false
+        data.Entity = ent
+        data.Weapon = ent
+        data.Explosion = true
+        networkGunshotEvent(data)
+    end
+end)
+
+// whatever lua mod that creates an explosion
+local function effect_dwr_detour(args)
+    if args[1] != "Explosion" then return end
+
+    local data = {}
+    data.Src = args[2]:GetOrigin()
+    data.Dir = vector_origin
+    data.Vel = vector_origin
+    data.Spread = vector_origin
+    data.Ammotype = "explosions"
+    data.isSuppressed = false
+    data.Entity = NULL
+    data.Weapon = NULL
+    data.Explosion = true
+    networkGunshotEvent(data)
+end
+
+hook.Add("InitPostEntity", "dwr_create_hooks", function()
+    local function create_effect_detour(a)
+        return function(...)
+            local args = { ... }
+            effect_dwr_detour(args)
+            return a(...)
+        end
+    end
+    util.Effect = create_effect_detour(util.Effect)
+
     if TacRP then
         local function create_tacrp_detour(a)
             return function(...)
@@ -224,7 +287,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             data.Src = pos
             data.Dir = dir
             data.Vel = vel
-            data.Spread = Vector(0,0,0)
+            data.Spread = vector_origin
             data.Ammotype = ammotype
             data.isSuppressed = isSuppressed
             data.Entity = latestPhysBullet["inflictor"]:GetOwner()
@@ -261,7 +324,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             data.Src = pos
             data.Dir = dir
             data.Vel = vel
-            data.Spread = Vector(0,0,0)
+            data.Spread = vector_origin
             data.Ammotype = ammotype
             data.isSuppressed = isSuppressed
             data.Entity = latestPhysBullet["Attacker"]
@@ -295,7 +358,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
                 data.Src = pos
                 data.Dir = dir
                 data.Vel = vel
-                data.Spread = Vector(0,0,0)
+                data.Spread = vector_origin
                 data.Ammotype = ammotype
                 data.isSuppressed = isSuppressed
                 data.Entity = attacker
