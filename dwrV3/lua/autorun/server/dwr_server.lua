@@ -108,6 +108,40 @@ local function networkGunshotEvent(data)
     if networkGunshotsConvar:GetBool() then net.SendPAS(data.Src) else net.Broadcast() end
 end
 
+function tacrp_dwr_detour(args)
+    local bullet = args[2]
+    local attacker = bullet.Attacker
+
+    if attacker.dwr_shotThisTick == nil then attacker.dwr_shotThisTick = false end
+    if attacker.dwr_shotThisTick then return end
+    if table.Count(bullet.Damaged) != 0 or bullet.dwr_detected then return end
+
+    local weapon = bullet.Weapon
+    local weaponClass = weapon:GetClass()
+    local isSuppressed = getSuppressed(weapon, weaponClass)
+    local pos = attacker:GetShootPos()
+    local ammotype = bullet.Weapon.Primary.Ammo
+    local dir = bullet.Vel:Angle():Forward()
+    local vel = bullet.Vel
+
+    timer.Simple(0, function()
+        local data = {}
+        data.Src = pos
+        data.Dir = dir
+        data.Vel = vel
+        data.Spread = vector_origin
+        data.Ammotype = ammotype
+        data.isSuppressed = isSuppressed
+        data.Entity = attacker
+        data.Weapon = attacker:GetActiveWeapon()
+        networkGunshotEvent(data)
+    end)
+    bullet.dwr_detected = true
+    attacker.dwr_shotThisTick = true
+
+    timer.Simple(engine.TickInterval()*2, function() attacker.dwr_shotThisTick = false end)
+end
+
 function arc9_dwr_detour(args)
     local bullet = args[2]
     local attacker = bullet.Attacker
@@ -125,11 +159,11 @@ function arc9_dwr_detour(args)
     local vel = bullet.Vel
 
     timer.Simple(0, function()
-        data = {}
+        local data = {}
         data.Src = pos
         data.Dir = dir
         data.Vel = vel
-        data.Spread = Vector(0,0,0)
+        data.Spread = vector_origin
         data.Ammotype = ammotype
         data.isSuppressed = isSuppressed
         data.Entity = attacker
@@ -143,15 +177,26 @@ function arc9_dwr_detour(args)
 end
 
 hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
+    if TacRP then
+        local function create_tacrp_detour(a)
+            return function(...)
+                local args = { ... }
+                tacrp_dwr_detour(args)
+                return a(...)
+            end
+        end
+        TacRP.SendBullet = create_tacrp_detour(TacRP.SendBullet)
+    end
+
     if ARC9 then
-        function dwr_wrapfunction(a)    -- a = old function
+        local function create_arc9_detour(a)    -- a = old function
           return function(...)
             local args = { ... }
             arc9_dwr_detour(args)
             return a(...)
           end
         end
-        ARC9.SendBullet = dwr_wrapfunction(ARC9.SendBullet)
+        ARC9.SendBullet = create_arc9_detour(ARC9.SendBullet)
     end
 
     if TFA then
@@ -175,7 +220,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             entity.dwr_shotThisTick = true
             timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
 
-            data = {}
+            local data = {}
             data.Src = pos
             data.Dir = dir
             data.Vel = vel
@@ -212,7 +257,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
             local dir = latestPhysBullet["Vel"]:Angle():Forward()
             local vel = latestPhysBullet["Vel"]
 
-            data = {}
+            local data = {}
             data.Src = pos
             data.Dir = dir
             data.Vel = vel
@@ -246,7 +291,7 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
                 entity.dwr_shotThisTick = true
                 timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
 
-                data = {}
+                local data = {}
                 data.Src = pos
                 data.Dir = dir
                 data.Vel = vel
@@ -263,6 +308,10 @@ hook.Add("InitPostEntity", "dwr_create_physbul_hooks", function()
 
     hook.Remove("InitPostEntity", "dwr_create_physbul_hooks")
 end)
+
+local arccw_bullet_enable = GetConVar("arccw_bullet_enable")
+local arc9_bullet_physics = GetConVar("arc9_bullet_physics")
+local tacrp_physbullet = GetConVar("tacrp_physbullet")
 
 hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     if data.Spread.z == 0.125 then return end -- for my blood decal workaround for mw sweps
@@ -300,30 +349,35 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
             if data.Distance == 20000 then -- grenade launchers in arccw
                 return
             end
-            if GetConVar("arccw_bullet_enable"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then -- bullet physics in arcw
+            if arccw_bullet_enable:GetInt() == 1 and data.Spread == vector_origin then -- bullet physics in arcw
                 return
             end
         end
 
         if string.StartWith(weaponClass, "arc9_") then
-            if GetConVar("arc9_bullet_physics"):GetInt() == 1 and data.Spread == Vector(0, 0, 0) then -- bullet physics in arc9
+            if arc9_bullet_physics:GetInt() == 1 and data.Spread == vector_origin then -- bullet physics in arc9
                 return
             end
         end
 
-        if game.GetTimeScale() < 1 and data.Spread == Vector(0,0,0) and data.Tracer == 0 then return end -- FEAR bullet time
+        if string.StartWith(weaponClass, "tacrp_") then
+            if tacrp_physbullet:GetInt() == 1 and data.Spread == vector_origin then -- bullet physics in arc9
+                return
+            end
+        end
+
+        if game.GetTimeScale() < 1 and data.Spread == vector_origin and data.Tracer == 0 then return end -- FEAR bullet time
 
         if entity.dwr_shotThisTick == nil then entity.dwr_shotThisTick = false end
         if entity.dwr_shotThisTick then return end
         entity.dwr_shotThisTick = true
         timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
                                                                                              
-    
         if #data.AmmoType > 2 then ammotype = data.AmmoType elseif weapon.Primary then ammotype = weapon.Primary.Ammo end
         isSuppressed = getSuppressed(weapon, weaponClass)
     end
 
-    dwr_data = {}
+    local dwr_data = {}
     dwr_data.Src = data.Src
     dwr_data.Dir = data.Dir
     dwr_data.Vel = Vector(0,0,0)
