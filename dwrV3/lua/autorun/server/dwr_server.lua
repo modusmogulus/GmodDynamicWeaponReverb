@@ -424,7 +424,7 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
         end
 
         // https://github.com/HaodongMo/tacrp/blob/e69df9e7d81b33065f1a2087cc8da14550ada365/lua/weapons/tacrp_base/sh_shoot.lua#L262
-        if string.StartWith(weaponClass, "tacrp_") then
+        if string.StartWith(weaponClass, "tacrp_") and not entity:IsNPC() then
             local hitscan = !TacRP.ConVars["physbullet"]:GetBool()
             local dist = 100000
 
