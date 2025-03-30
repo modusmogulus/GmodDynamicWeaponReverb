@@ -73,7 +73,7 @@ local function writeVectorUncompressed(vector)
 end
 
 local function getSuppressed(weapon, weaponClass)
-    if string.StartWith(weaponClass, "arccw_") and weapon:GetBuff_Override("Silencer") then return true
+    if string.StartWith(weaponClass, "arccw_") and weapon.GetBuff_Override and weapon:GetBuff_Override("Silencer") then return true
     elseif string.StartWith(weaponClass, "arc9_") and isfunction(weapon.GetProcessedValue) and weapon:GetProcessedValue("Silencer") then return true
     elseif string.StartWith(weaponClass, "tfa_") and weapon:GetSilenced() then return true
     elseif string.StartWith(weaponClass, "mg_") or weaponClass == mg_valpha then
@@ -312,6 +312,7 @@ hook.Add("InitPostEntity", "dwr_create_hooks", function()
             timer.Simple(engine.TickInterval()*2, function() entity.dwr_shotThisTick = false end)
 
             local weapon = latestPhysBullet["Weapon"]
+
             local weaponClass = weapon:GetClass()
 
             local isSuppressed = getSuppressed(weapon, weaponClass)
