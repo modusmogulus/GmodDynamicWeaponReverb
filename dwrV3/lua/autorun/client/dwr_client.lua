@@ -10,6 +10,9 @@ local previousWep = NULL
 local blacklist = {}
 local serverBlacklist = {}
 
+local vec1 = Vector(1, 1, 1) * 0.5
+local negvec1 = Vector(1, 1, 1) * -0.5
+
 if not file.Read("dwr_weapon_blacklist.json") or #file.Read("dwr_weapon_blacklist.json") == 0 then
 	print("[DWRV3] Created the blacklist file.")
 	file.Write("dwr_weapon_blacklist.json", util.TableToJSON({}))
@@ -97,10 +100,10 @@ local function readVectorUncompressed()
 end
 
 local function traceableToSky(pos, offset)
-    local tr = util.TraceLine({start=pos + offset, endpos=pos + offset + vector_up * 56754, mask=MASK_GLOBAL})
-	local temp = util.TraceLine({start=tr.StartPos, endpos=pos, mask=MASK_GLOBAL}) -- doing this because sometimes the trace can go oob and even rarely there are cases where i cant see if it spawned oob
+	local trace_to_offset = util.TraceLine({start=pos, endpos=pos + offset, mask=MASK_GLOBAL})
+    local trace_to_sky = util.TraceLine({start=trace_to_offset.HitPos, endpos=trace_to_offset.HitPos + vector_up * 56754, mask=MASK_GLOBAL})
 
-    if temp.HitPos == pos and not temp.StartSolid and tr.HitSky then
+    if trace_to_sky.HitSky then
     	return true
     end
 
@@ -198,10 +201,12 @@ local function traceableToPos(earpos, pos, offset)
 	earpos = earpos + vector_up * 10 -- just in case
 	pos = pos + vector_up * 10 -- just in case
 
-    local traceToOffset = util.TraceLine( {
+    local traceToOffset = util.TraceHull( {
         start = earpos,
         endpos = earpos + offset,
-        mask = MASK_GLOBAL
+        mask = MASK_GLOBAL,
+        maxs = vec1,
+        mins = negvec1
     })
 
     totalDistance = traceToOffset.HitPos:Distance(traceToOffset.StartPos)
@@ -209,10 +214,12 @@ local function traceableToPos(earpos, pos, offset)
     lastTrace = traceToOffset
 
 	for i=1,bounceLimit,1 do
-	    local bounceTrace = util.TraceLine( {
+	    local bounceTrace = util.TraceHull( {
 	        start = lastTrace.HitPos,
 	        endpos = lastTrace.HitPos + reflectVector(lastTrace.HitPos, lastTrace.Normal) * 56754,
-	        mask = MASK_GLOBAL
+	        mask = MASK_GLOBAL,
+	        maxs = vec1,
+	        mins = negvec1
 	    })
 	    if bounceTrace.StartSolid or bounceTrace.AllSolid then break end
 
@@ -220,10 +227,12 @@ local function traceableToPos(earpos, pos, offset)
 	    lastTrace = bounceTrace
 	end
 
-    local traceLastTraceToPos = util.TraceLine( {
+    local traceLastTraceToPos = util.TraceHull( {
         start = lastTrace.HitPos,
         endpos = pos,
-        mask = MASK_GLOBAL
+        mask = MASK_GLOBAL,
+        maxs = vec1,
+        mins = negvec1
     })
 
     totalDistance = totalDistance + traceLastTraceToPos.HitPos:Distance(traceLastTraceToPos.StartPos)
@@ -350,8 +359,8 @@ local function playReverb(src, ammotype, isSuppressed, weapon)
 	local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 	table.insert(reverbQueue, reverbSoundFile)
 
-	if earpos_positionState == "outdoors" and positionState == "indoors" and occlusionPercentage < 1 then
-		local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammotype .. "/" .. earpos_positionState .. "/" .. distanceState .. "/", dwr_reverbFiles)
+	if earpos_positionState == "outdoors" and positionState == "indoors" then
+		local reverbOptions = getEntriesStartingWith("dwr" .. "/" .. ammotype .. "/" .. "outdoors" .. "/" .. distanceState .. "/", dwr_reverbFiles)
 		local reverbSoundFile = reverbOptions[math.random(#reverbOptions)]
 		table.insert(reverbQueue, reverbSoundFile)
 	end
@@ -361,10 +370,10 @@ local function playReverb(src, ammotype, isSuppressed, weapon)
 	timer.Simple(calculateDelay(distance, soundspeed), function()
 		for _, path in ipairs(reverbQueue) do
 			local mult = 1
-			if #reverbQueue > 1 and string.find(path, "/indoors/") then
-				mult = 0.75
+			if #reverbQueue > 1 and string.find(path, "indoors") then
+				mult = 0.5
 			elseif #reverbQueue > 1 then
-				mult = 1.75
+				mult = 1
 			end
 			EmitSound(path, earpos, -2, CHAN_AUTO, volume * (cl_dwr_volume:GetFloat() / 100) / #reverbQueue * mult, soundLevel, soundFlags, pitch, dsp)
 		end
@@ -529,10 +538,15 @@ local SP = game.SinglePlayer()
 
 net.Receive("dwr_EntityEmitSound_networked", function(len)
 	local data = net.ReadTable()
+
 	if not data then return end
+
 	data = processSound(data, true)
+
 	if data.Entity == NULL then return end
+
 	if not SP and data.Entity == LocalPlayer() then return end
+
 	data.Entity:EmitSound(data.SoundName, data.SoundLevel, data.Pitch, data.Volume, CHAN_STATIC, data.Flags, data.DSP)
 end)
 
@@ -582,7 +596,7 @@ hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
 
 	if cl_dwr_process_everything:GetInt() == 1 then
 		local isweapon = false
-		if string.find(data.SoundName, "weapon") then isweapon = true end
+		if string.StartsWith(data.OriginalSoundName, "Weapon") then isweapon = true end
 		data = processSound(data, isweapon)
 		return true
 	end

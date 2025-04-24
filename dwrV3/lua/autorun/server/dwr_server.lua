@@ -197,8 +197,8 @@ hook.Add("OnEntityCreated", "dwr_OnEntityCreated_explosiondetect", function(ent)
 end)
 
 // smg and regular grenade
-hook.Add("EntityRemoved", "dwr_EntityRemoved_explosiondetect", function(ent) 
-    if IsValid(ent) and (ent:GetClass() == "grenade_ar2" or ent:GetClass() == "npc_grenade_frag") then
+hook.Add("EntityRemoved", "dwr_EntityRemoved_explosiondetect", function(ent)
+    if IsValid(ent) and (ent:GetClass() == "grenade_ar2" or ent:GetClass() == "npc_grenade_frag" or ent:GetClass() == "env_explosion") then
         local data = {}
         data.Src = ent:GetPos()
         data.Dir = vector_origin
@@ -476,10 +476,10 @@ hook.Add("EntityFireBullets", "dwr_EntityFireBullets", function(attacker, data)
     networkGunshotEvent(dwr_data)
 end)
 
--- Can't get it working reliably for all scenarios. I know for a fact it works well for weapons so I'll leave it at that.
+-- Can't get it working reliably for all scenarios. I know for a fact it works well for stock weapons so I'll leave it at that.
 hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
     if not networkSoundsConvar:GetBool() then return end
-    if not string.find(data.SoundName, "weapon") then return end
+    if not string.StartsWith(data.OriginalSoundName, "Weapon") then return end
     if string.find(data.SoundName, "rpg") then return end
 
     local src = data.Entity:GetPos()
@@ -491,5 +491,6 @@ hook.Add("EntityEmitSound", "dwr_EntityEmitSound", function(data)
     net.Broadcast()
 
     data.Volume = 0
+    
     return true
 end)
