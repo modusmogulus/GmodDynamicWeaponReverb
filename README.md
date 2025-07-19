@@ -15,7 +15,7 @@ If you think something is lacking or doesn't work properly, don't hesitate to re
 </p>
 
 <h2>Credits</h2>
-<p>Developers: <b>Teams</b> (modusmogulus), relaxtakenotes<br> Sound designers: <b>Teams</b> (modusmogulus), <b>Kotoshmet</b>, <b>Strayed</b></p>
+<p>Developers: <b>Teams</b> (modusmogulus)<br> Sound designers: <b>Teams</b> (modusmogulus), <b>Kotoshmet</b>, <b>Strayed</b></p>
 
 
 <h2>Before reporting a bug or a suggestion</h2>
